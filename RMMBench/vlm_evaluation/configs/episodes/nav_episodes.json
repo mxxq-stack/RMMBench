@@ -1,0 +1,1961 @@
+{
+    "nav_select_tool_galley_0": [
+        {
+            "task": {
+                "components": [
+                    {
+                        "name": "whisk_8",
+                        "xml_path": "obj/meshes/tablewares/whisk/whisk_8/model.xml",
+                        "position": [
+                            2.756285174807607,
+                            -1.0413725143723396,
+                            0.9350319634669411
+                        ],
+                        "orientation": [
+                            0.11920908968074838,
+                            0.7238799926152736,
+                            -0.6793420265690642,
+                            0.016773794020313475
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "ladle_3",
+                        "xml_path": "obj/meshes/tablewares/ladle/ladle_3/model.xml",
+                        "position": [
+                            2.9341033791582167,
+                            -0.8687504357172661,
+                            0.933241983602714
+                        ],
+                        "orientation": [
+                            0.7074042337145989,
+                            0.006799450537962128,
+                            -0.00679622741991482,
+                            -0.7067438212590903
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "spatula_6",
+                        "xml_path": "obj/meshes/tablewares/spatula/spatula_6/model.xml",
+                        "position": [
+                            2.9377532320889816,
+                            -1.1395823425182874,
+                            0.9294565771674128
+                        ],
+                        "orientation": [
+                            0.6806402262567571,
+                            0.22144575628071936,
+                            0.28467711861777967,
+                            -0.6376908322705368
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "tray_3",
+                        "xml_path": "obj/meshes/containers/tray/tray_3/model.xml",
+                        "position": [
+                            2.9099824861621153,
+                            -3.117997796051518,
+                            1.01
+                        ],
+                        "orientation": [
+                            0.7073882691671998,
+                            0.0,
+                            0.0,
+                            -0.706825181105366
+                        ],
+                        "class": "FlatContainer"
+                    },
+                    {
+                        "name": "egg_10",
+                        "xml_path": "obj/meshes/ingredients/egg/egg_10/model.xml",
+                        "position": [
+                            2.7865512374285837,
+                            -3.4002155631800783,
+                            0.9455824210249535
+                        ],
+                        "orientation": [
+                            0.7073125075414555,
+                            -0.014154195502943652,
+                            -0.01692795549669905,
+                            -0.7065565226843394
+                        ],
+                        "class": "Ingredient"
+                    }
+                ],
+                "scene": {
+                    "name": "empty",
+                    "position": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "orientation": [
+                        1.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "floor_textures": [
+                        "floorplane"
+                    ],
+                    "shadow": false
+                },
+                "instructions": [
+                    "Choose the appropriate tool based on the egg beside the tray and place it into the tray."
+                ],
+                "conditions": {
+                    "asyn_sequence": [
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    2.0499926535938413,
+                                    2.5499926535938413,
+                                    -1.2499977960701916,
+                                    -0.7499977960701917
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "left",
+                                "target_bbox": [
+                                    2.0499926535938413,
+                                    2.5499926535938413,
+                                    -1.2499977960701916,
+                                    -0.7499977960701917
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        },
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    1.9699824861621154,
+                                    2.4699824861621154,
+                                    -3.817997796051518,
+                                    -3.317997796051518
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "left",
+                                "target_bbox": [
+                                    1.9699824861621154,
+                                    2.4699824861621154,
+                                    -3.817997796051518,
+                                    -3.317997796051518
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        },
+                        {
+                            "contain": {
+                                "entities": [
+                                    "whisk_8"
+                                ],
+                                "container": "tray_3"
+                            }
+                        }
+                    ],
+                    "ordered_indices": [
+                        0,
+                        1
+                    ]
+                },
+                "robocasa_scene": "GALLEY_0",
+                "destination_position": "left",
+                "fixture_surface": "counter_right_main_group",
+                "target_entity": [
+                    [
+                        "whisk_8"
+                    ],
+                    [
+                        "egg_10"
+                    ]
+                ],
+                "target_container": [
+                    [],
+                    [
+                        "tray_3"
+                    ]
+                ]
+            }
+        },
+        {
+            "task": {
+                "components": [
+                    {
+                        "name": "whisk_8",
+                        "xml_path": "obj/meshes/tablewares/whisk/whisk_8/model.xml",
+                        "position": [
+                            2.8573913547722256,
+                            -0.9497266956552898,
+                            0.9349441631183534
+                        ],
+                        "orientation": [
+                            -0.053683646810028435,
+                            -0.6806675450105297,
+                            -0.06641170035923874,
+                            -0.7275982719123993
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "spoon_14",
+                        "xml_path": "obj/meshes/tablewares/spoons/spoon_14/model.xml",
+                        "position": [
+                            2.7152765298005166,
+                            -1.1319157131977238,
+                            0.9249817794515686
+                        ],
+                        "orientation": [
+                            0.7046596041293399,
+                            0.06098376545140587,
+                            0.028889431460285903,
+                            -0.7063294014902338
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "ladle_3",
+                        "xml_path": "obj/meshes/tablewares/ladle/ladle_3/model.xml",
+                        "position": [
+                            2.715353289758505,
+                            -0.8687525849523511,
+                            0.9332420283873465
+                        ],
+                        "orientation": [
+                            0.7074022902982262,
+                            0.006840483268843561,
+                            -0.006757425601514054,
+                            -0.7067457425897334
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "tray_3",
+                        "xml_path": "obj/meshes/containers/tray/tray_3/model.xml",
+                        "position": [
+                            2.9099824861621153,
+                            -3.117997796051518,
+                            1.01
+                        ],
+                        "orientation": [
+                            0.7073882691671998,
+                            0.0,
+                            0.0,
+                            -0.706825181105366
+                        ],
+                        "class": "FlatContainer"
+                    },
+                    {
+                        "name": "egg_10",
+                        "xml_path": "obj/meshes/ingredients/egg/egg_10/model.xml",
+                        "position": [
+                            2.719883918369784,
+                            -3.466883889295148,
+                            0.9455824220004039
+                        ],
+                        "orientation": [
+                            0.7073122863511435,
+                            -0.014137129876514219,
+                            -0.016911401617980496,
+                            -0.7065574821844915
+                        ],
+                        "class": "Ingredient"
+                    }
+                ],
+                "scene": {
+                    "name": "empty",
+                    "position": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "orientation": [
+                        1.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "floor_textures": [
+                        "floorplane"
+                    ],
+                    "shadow": false
+                },
+                "instructions": [
+                    "Choose the appropriate tool based on the egg beside the tray and place it into the tray."
+                ],
+                "conditions": {
+                    "asyn_sequence": [
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    2.0499926535938413,
+                                    2.5499926535938413,
+                                    -1.2499977960701916,
+                                    -0.7499977960701917
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "left",
+                                "target_bbox": [
+                                    2.0499926535938413,
+                                    2.5499926535938413,
+                                    -1.2499977960701916,
+                                    -0.7499977960701917
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        },
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    1.9699824861621154,
+                                    2.4699824861621154,
+                                    -3.817997796051518,
+                                    -3.317997796051518
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "left",
+                                "target_bbox": [
+                                    1.9699824861621154,
+                                    2.4699824861621154,
+                                    -3.817997796051518,
+                                    -3.317997796051518
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        },
+                        {
+                            "contain": {
+                                "entities": [
+                                    "whisk_8"
+                                ],
+                                "container": "tray_3"
+                            }
+                        }
+                    ],
+                    "ordered_indices": [
+                        0,
+                        1
+                    ]
+                },
+                "robocasa_scene": "GALLEY_0",
+                "destination_position": "left",
+                "fixture_surface": "counter_right_main_group",
+                "target_entity": [
+                    [
+                        "whisk_8"
+                    ],
+                    [
+                        "egg_10"
+                    ]
+                ],
+                "target_container": [
+                    [],
+                    [
+                        "tray_3"
+                    ]
+                ]
+            }
+        },
+        {
+            "task": {
+                "components": [
+                    {
+                        "name": "whisk_8",
+                        "xml_path": "obj/meshes/tablewares/whisk/whisk_8/model.xml",
+                        "position": [
+                            2.9002062016610703,
+                            -1.0563044844114828,
+                            0.9347274562797646
+                        ],
+                        "orientation": [
+                            0.7053762816440161,
+                            0.05899127818820305,
+                            -0.05755386592854734,
+                            -0.7040254845589481
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "ladle_3",
+                        "xml_path": "obj/meshes/tablewares/ladle/ladle_3/model.xml",
+                        "position": [
+                            2.7153532274418315,
+                            -0.8687522001357094,
+                            0.9332420283876552
+                        ],
+                        "orientation": [
+                            0.707403708352433,
+                            0.006840496746294727,
+                            -0.006757411956246231,
+                            -0.7067443232153644
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "spatula_6",
+                        "xml_path": "obj/meshes/tablewares/spatula/spatula_6/model.xml",
+                        "position": [
+                            2.7190022588428993,
+                            -1.1395870665151049,
+                            0.9294565771674128
+                        ],
+                        "orientation": [
+                            0.6806294061609853,
+                            0.2214505864982989,
+                            0.2846733612033638,
+                            -0.6377023809189396
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "tray_3",
+                        "xml_path": "obj/meshes/containers/tray/tray_3/model.xml",
+                        "position": [
+                            2.9099824861621153,
+                            -3.117997796051518,
+                            1.01
+                        ],
+                        "orientation": [
+                            0.7073882691671998,
+                            0.0,
+                            0.0,
+                            -0.706825181105366
+                        ],
+                        "class": "FlatContainer"
+                    },
+                    {
+                        "name": "egg_10",
+                        "xml_path": "obj/meshes/ingredients/egg/egg_10/model.xml",
+                        "position": [
+                            2.5695048713567687,
+                            -3.906305214882447,
+                            0.9454085891295184
+                        ],
+                        "orientation": [
+                            0.24253600836488595,
+                            0.08110658925670626,
+                            -0.1074808427424984,
+                            0.9607527643826653
+                        ],
+                        "class": "Ingredient"
+                    }
+                ],
+                "scene": {
+                    "name": "empty",
+                    "position": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "orientation": [
+                        1.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "floor_textures": [
+                        "floorplane"
+                    ],
+                    "shadow": false
+                },
+                "instructions": [
+                    "Choose the appropriate tool based on the egg beside the tray and place it into the tray."
+                ],
+                "conditions": {
+                    "asyn_sequence": [
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    2.0499926535938413,
+                                    2.5499926535938413,
+                                    -1.2499977960701916,
+                                    -0.7499977960701917
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "left",
+                                "target_bbox": [
+                                    2.0499926535938413,
+                                    2.5499926535938413,
+                                    -1.2499977960701916,
+                                    -0.7499977960701917
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        },
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    1.9699824861621154,
+                                    2.4699824861621154,
+                                    -3.817997796051518,
+                                    -3.317997796051518
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "left",
+                                "target_bbox": [
+                                    1.9699824861621154,
+                                    2.4699824861621154,
+                                    -3.817997796051518,
+                                    -3.317997796051518
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        },
+                        {
+                            "contain": {
+                                "entities": [
+                                    "whisk_8"
+                                ],
+                                "container": "tray_3"
+                            }
+                        }
+                    ],
+                    "ordered_indices": [
+                        0,
+                        1
+                    ]
+                },
+                "robocasa_scene": "GALLEY_0",
+                "destination_position": "left",
+                "fixture_surface": "counter_right_main_group",
+                "target_entity": [
+                    [
+                        "whisk_8"
+                    ],
+                    [
+                        "egg_10"
+                    ]
+                ],
+                "target_container": [
+                    [],
+                    [
+                        "tray_3"
+                    ]
+                ]
+            }
+        },
+        {
+            "task": {
+                "components": [
+                    {
+                        "name": "whisk_8",
+                        "xml_path": "obj/meshes/tablewares/whisk/whisk_8/model.xml",
+                        "position": [
+                            2.8548726165723033,
+                            -1.0174732050117374,
+                            0.9358214844144277
+                        ],
+                        "orientation": [
+                            0.7812699801161714,
+                            0.2804541811198039,
+                            -0.3094616686028296,
+                            0.4638923863648234
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "spoon_14",
+                        "xml_path": "obj/meshes/tablewares/spoons/spoon_14/model.xml",
+                        "position": [
+                            2.7152849640393857,
+                            -0.8694114732301479,
+                            0.9249817794515686
+                        ],
+                        "orientation": [
+                            0.7046260742699,
+                            0.06098513674800928,
+                            0.02888653656216414,
+                            -0.7063628504955938
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "ladle_3",
+                        "xml_path": "obj/meshes/tablewares/ladle/ladle_3/model.xml",
+                        "position": [
+                            2.934103533838644,
+                            -0.8687508837238875,
+                            0.9332419836026496
+                        ],
+                        "orientation": [
+                            0.7074026214040098,
+                            0.006799435102870424,
+                            -0.006796242864429514,
+                            -0.7067454350725894
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "tray_3",
+                        "xml_path": "obj/meshes/containers/tray/tray_3/model.xml",
+                        "position": [
+                            2.9099824861621153,
+                            -3.117997796051518,
+                            1.01
+                        ],
+                        "orientation": [
+                            0.7073882691671998,
+                            0.0,
+                            0.0,
+                            -0.706825181105366
+                        ],
+                        "class": "FlatContainer"
+                    },
+                    {
+                        "name": "egg_10",
+                        "xml_path": "obj/meshes/ingredients/egg/egg_10/model.xml",
+                        "position": [
+                            2.853219737270757,
+                            -3.4002149730754994,
+                            0.9455824366542186
+                        ],
+                        "orientation": [
+                            0.7073184220303629,
+                            -0.01419105816163055,
+                            -0.01691155333816111,
+                            -0.7065502551753994
+                        ],
+                        "class": "Ingredient"
+                    }
+                ],
+                "scene": {
+                    "name": "empty",
+                    "position": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "orientation": [
+                        1.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "floor_textures": [
+                        "floorplane"
+                    ],
+                    "shadow": false
+                },
+                "instructions": [
+                    "Choose the appropriate tool based on the egg beside the tray and place it into the tray."
+                ],
+                "conditions": {
+                    "asyn_sequence": [
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    2.0499926535938413,
+                                    2.5499926535938413,
+                                    -1.2499977960701916,
+                                    -0.7499977960701917
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "left",
+                                "target_bbox": [
+                                    2.0499926535938413,
+                                    2.5499926535938413,
+                                    -1.2499977960701916,
+                                    -0.7499977960701917
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        },
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    1.9699824861621154,
+                                    2.4699824861621154,
+                                    -3.817997796051518,
+                                    -3.317997796051518
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "left",
+                                "target_bbox": [
+                                    1.9699824861621154,
+                                    2.4699824861621154,
+                                    -3.817997796051518,
+                                    -3.317997796051518
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        },
+                        {
+                            "contain": {
+                                "entities": [
+                                    "whisk_8"
+                                ],
+                                "container": "tray_3"
+                            }
+                        }
+                    ],
+                    "ordered_indices": [
+                        0,
+                        1
+                    ]
+                },
+                "robocasa_scene": "GALLEY_0",
+                "destination_position": "left",
+                "fixture_surface": "counter_right_main_group",
+                "target_entity": [
+                    [
+                        "whisk_8"
+                    ],
+                    [
+                        "egg_10"
+                    ]
+                ],
+                "target_container": [
+                    [],
+                    [
+                        "tray_3"
+                    ]
+                ]
+            }
+        },
+        {
+            "task": {
+                "components": [
+                    {
+                        "name": "whisk_8",
+                        "xml_path": "obj/meshes/tablewares/whisk/whisk_8/model.xml",
+                        "position": [
+                            2.775207057856711,
+                            -1.0938077656630223,
+                            0.9347273676042616
+                        ],
+                        "orientation": [
+                            0.70541371748246,
+                            0.05908358037556812,
+                            -0.05745190032209088,
+                            -0.7039885630228381
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "ladle_3",
+                        "xml_path": "obj/meshes/tablewares/ladle/ladle_3/model.xml",
+                        "position": [
+                            2.9341033886271677,
+                            -0.8687504320675241,
+                            0.9332419836027145
+                        ],
+                        "orientation": [
+                            0.7074042506393731,
+                            0.006799450700212082,
+                            -0.006796227257572149,
+                            -0.706743804318501
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "spatula_6",
+                        "xml_path": "obj/meshes/tablewares/spatula/spatula_6/model.xml",
+                        "position": [
+                            2.719002163449484,
+                            -0.8770874890321472,
+                            0.9294565771674128
+                        ],
+                        "orientation": [
+                            0.6806283133045974,
+                            0.22145107435379202,
+                            0.28467298169445726,
+                            -0.6377035473391056
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "tray_3",
+                        "xml_path": "obj/meshes/containers/tray/tray_3/model.xml",
+                        "position": [
+                            2.9099824861621153,
+                            -3.117997796051518,
+                            1.01
+                        ],
+                        "orientation": [
+                            0.7073882691671998,
+                            0.0,
+                            0.0,
+                            -0.706825181105366
+                        ],
+                        "class": "FlatContainer"
+                    },
+                    {
+                        "name": "egg_10",
+                        "xml_path": "obj/meshes/ingredients/egg/egg_10/model.xml",
+                        "position": [
+                            2.853216973442403,
+                            -3.600212087662343,
+                            0.945582179107649
+                        ],
+                        "orientation": [
+                            0.7073335252888633,
+                            -0.014201200180060424,
+                            -0.016977253456321006,
+                            -0.7065333557454698
+                        ],
+                        "class": "Ingredient"
+                    }
+                ],
+                "scene": {
+                    "name": "empty",
+                    "position": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "orientation": [
+                        1.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "floor_textures": [
+                        "floorplane"
+                    ],
+                    "shadow": false
+                },
+                "instructions": [
+                    "Choose the appropriate tool based on the egg beside the tray and place it into the tray."
+                ],
+                "conditions": {
+                    "asyn_sequence": [
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    2.0499926535938413,
+                                    2.5499926535938413,
+                                    -1.2499977960701916,
+                                    -0.7499977960701917
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "left",
+                                "target_bbox": [
+                                    2.0499926535938413,
+                                    2.5499926535938413,
+                                    -1.2499977960701916,
+                                    -0.7499977960701917
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        },
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    1.9699824861621154,
+                                    2.4699824861621154,
+                                    -3.817997796051518,
+                                    -3.317997796051518
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "left",
+                                "target_bbox": [
+                                    1.9699824861621154,
+                                    2.4699824861621154,
+                                    -3.817997796051518,
+                                    -3.317997796051518
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        },
+                        {
+                            "contain": {
+                                "entities": [
+                                    "whisk_8"
+                                ],
+                                "container": "tray_3"
+                            }
+                        }
+                    ],
+                    "ordered_indices": [
+                        0,
+                        1
+                    ]
+                },
+                "robocasa_scene": "GALLEY_0",
+                "destination_position": "left",
+                "fixture_surface": "counter_right_main_group",
+                "target_entity": [
+                    [
+                        "whisk_8"
+                    ],
+                    [
+                        "egg_10"
+                    ]
+                ],
+                "target_container": [
+                    [],
+                    [
+                        "tray_3"
+                    ]
+                ]
+            }
+        }
+    ],
+    "nav_burnt_bread_0": [
+        {
+            "task": {
+                "components": [
+                    {
+                        "name": "stove_0",
+                        "xml_path": "obj/meshes/containers/stovetops/stove_0/model.xml",
+                        "position": [
+                            2.75,
+                            -0.3,
+                            0.9402205882352941
+                        ],
+                        "orientation": [
+                            1.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "class": "Stove",
+                        "has_offset": true
+                    },
+                    {
+                        "name": "plate_0",
+                        "xml_path": "obj/meshes/tablewares/plates/plate_0/model.xml",
+                        "position": [
+                            2.419967571243619,
+                            -3.155127391388798,
+                            0.9789330105999999
+                        ],
+                        "orientation": [
+                            1.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "class": "Plate"
+                    },
+                    {
+                        "name": "bread_21",
+                        "xml_path": "obj/meshes/breads/bread/bread_21/model.xml",
+                        "position": [
+                            2.4202440686529774,
+                            -3.155004395284704,
+                            1.002533717565701
+                        ],
+                        "orientation": [
+                            0.9999943557019477,
+                            -0.0004828068375039367,
+                            0.0019764979978104187,
+                            -0.0026737459620170827
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "tray_7",
+                        "xml_path": "obj/meshes/containers/tray/tray_7/model.xml",
+                        "position": [
+                            3.149967571243619,
+                            -3.025127391388798,
+                            0.9900000000000001
+                        ],
+                        "orientation": [
+                            0.0007963267107332633,
+                            0.0,
+                            0.0,
+                            0.9999996829318346
+                        ],
+                        "class": "FlatContainer"
+                    },
+                    {
+                        "name": "bread_21_1",
+                        "xml_path": "obj/meshes/breads/bread/bread_21/model.xml",
+                        "position": [
+                            2.594696065178097,
+                            -3.102825453820763,
+                            0.9474971290277402
+                        ],
+                        "orientation": [
+                            -0.04151824623810992,
+                            0.044721837882601145,
+                            -0.9981166326461866,
+                            0.00627535502991457
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "bread_9",
+                        "xml_path": "obj/meshes/breads/bread/bread_9/model.xml",
+                        "position": [
+                            2.874821210603806,
+                            -3.2293032540948055,
+                            0.9274596552575816
+                        ],
+                        "orientation": [
+                            0.9999474039657419,
+                            0.000574733192389414,
+                            -0.010240032826834054,
+                            2.6676514266851827e-05
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "pan_1",
+                        "xml_path": "obj/meshes/tablewares/pans/pan_1/model.xml",
+                        "position": [
+                            3.527330872947547,
+                            -0.3183751081089732,
+                            0.9474828838663689
+                        ],
+                        "orientation": [
+                            0.8090174502012745,
+                            0.00016457793329725063,
+                            0.00012869162214558823,
+                            -0.5877845877720835
+                        ],
+                        "class": "FlatContainer"
+                    }
+                ],
+                "scene": {
+                    "name": "empty",
+                    "position": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "orientation": [
+                        1.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "floor_textures": [
+                        "floorplane"
+                    ],
+                    "shadow": false
+                },
+                "instructions": [
+                    "Navigate to pick the fresh bread and discard the burnt one in the bowl, then go to the stove to pan-fry the bread."
+                ],
+                "conditions": {
+                    "asyn_sequence": [
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    0.825,
+                                    1.325,
+                                    -2.9,
+                                    -2.4
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "bottom",
+                                "target_bbox": [
+                                    0.825,
+                                    1.325,
+                                    -2.9,
+                                    -2.4
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        },
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    1.9,
+                                    2.4,
+                                    -1.93,
+                                    -1.43
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "bottom",
+                                "target_bbox": [
+                                    1.9,
+                                    2.4,
+                                    -1.93,
+                                    -1.43
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        }
+                    ],
+                    "ordered_indices": [
+                        0,
+                        1
+                    ]
+                },
+                "robocasa_scene": "ONE_WALL_LARGE_0",
+                "destination_position": "bottom",
+                "fixture_surface": "stovetop_main_group",
+                "target_entity": [
+                    [
+                        "bread_21",
+                        "bread_9"
+                    ],
+                    []
+                ],
+                "target_container": [
+                    [
+                        "plate_0",
+                        "tray_7"
+                    ],
+                    [
+                        "pan_1"
+                    ]
+                ]
+            }
+        },
+        {
+            "task": {
+                "components": [
+                    {
+                        "name": "stove_0",
+                        "xml_path": "obj/meshes/containers/stovetops/stove_0/model.xml",
+                        "position": [
+                            2.75,
+                            -0.3,
+                            0.9402205882352941
+                        ],
+                        "orientation": [
+                            1.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "class": "Stove",
+                        "has_offset": true
+                    },
+                    {
+                        "name": "plate_0",
+                        "xml_path": "obj/meshes/tablewares/plates/plate_0/model.xml",
+                        "position": [
+                            2.419967571243619,
+                            -3.155127391388798,
+                            0.9789330105999999
+                        ],
+                        "orientation": [
+                            1.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "class": "Plate"
+                    },
+                    {
+                        "name": "bread_21",
+                        "xml_path": "obj/meshes/breads/bread/bread_21/model.xml",
+                        "position": [
+                            2.420244068653488,
+                            -3.15500439528449,
+                            1.0025337175656932
+                        ],
+                        "orientation": [
+                            0.9999943557019635,
+                            -0.0004828068373989046,
+                            0.0019764979977429965,
+                            -0.0026737459563529195
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "tray_7",
+                        "xml_path": "obj/meshes/containers/tray/tray_7/model.xml",
+                        "position": [
+                            3.149967571243619,
+                            -3.025127391388798,
+                            0.9900000000000001
+                        ],
+                        "orientation": [
+                            0.0007963267107332633,
+                            0.0,
+                            0.0,
+                            0.9999996829318346
+                        ],
+                        "class": "FlatContainer"
+                    },
+                    {
+                        "name": "bread_21_1",
+                        "xml_path": "obj/meshes/breads/bread/bread_21/model.xml",
+                        "position": [
+                            2.6302462180090322,
+                            -3.034455215236334,
+                            0.9543385488705843
+                        ],
+                        "orientation": [
+                            0.59428561275231,
+                            0.388431770145044,
+                            -0.5872814336772676,
+                            0.38864622483123634
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "bread_9",
+                        "xml_path": "obj/meshes/breads/bread/bread_9/model.xml",
+                        "position": [
+                            2.874821210603809,
+                            -3.2293032540948072,
+                            0.9274596552575816
+                        ],
+                        "orientation": [
+                            0.9999474039657426,
+                            0.000574733192384787,
+                            -0.010240032826832585,
+                            2.6676514272532525e-05
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "pan_1",
+                        "xml_path": "obj/meshes/tablewares/pans/pan_1/model.xml",
+                        "position": [
+                            3.5427267492309373,
+                            -0.3344615891457864,
+                            0.9474720145452451
+                        ],
+                        "orientation": [
+                            0.8454822350460315,
+                            9.291133228749062e-08,
+                            -7.037863668303899e-08,
+                            -0.5340035488847936
+                        ],
+                        "class": "FlatContainer"
+                    }
+                ],
+                "scene": {
+                    "name": "empty",
+                    "position": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "orientation": [
+                        1.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "floor_textures": [
+                        "floorplane"
+                    ],
+                    "shadow": false
+                },
+                "instructions": [
+                    "Navigate to pick the fresh bread and discard the burnt one in the bowl, then go to the stove to pan-fry the bread."
+                ],
+                "conditions": {
+                    "asyn_sequence": [
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    0.825,
+                                    1.325,
+                                    -2.9,
+                                    -2.4
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "bottom",
+                                "target_bbox": [
+                                    0.825,
+                                    1.325,
+                                    -2.9,
+                                    -2.4
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        },
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    1.9,
+                                    2.4,
+                                    -1.93,
+                                    -1.43
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "bottom",
+                                "target_bbox": [
+                                    1.9,
+                                    2.4,
+                                    -1.93,
+                                    -1.43
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        }
+                    ],
+                    "ordered_indices": [
+                        0,
+                        1
+                    ]
+                },
+                "robocasa_scene": "ONE_WALL_LARGE_0",
+                "destination_position": "bottom",
+                "fixture_surface": "stovetop_main_group",
+                "target_entity": [
+                    [
+                        "bread_21",
+                        "bread_9"
+                    ],
+                    []
+                ],
+                "target_container": [
+                    [
+                        "plate_0",
+                        "tray_7"
+                    ],
+                    [
+                        "pan_1"
+                    ]
+                ]
+            }
+        },
+        {
+            "task": {
+                "components": [
+                    {
+                        "name": "stove_0",
+                        "xml_path": "obj/meshes/containers/stovetops/stove_0/model.xml",
+                        "position": [
+                            2.75,
+                            -0.3,
+                            0.9402205882352941
+                        ],
+                        "orientation": [
+                            1.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "class": "Stove",
+                        "has_offset": true
+                    },
+                    {
+                        "name": "plate_0",
+                        "xml_path": "obj/meshes/tablewares/plates/plate_0/model.xml",
+                        "position": [
+                            2.419967571243619,
+                            -3.155127391388798,
+                            0.9789330105999999
+                        ],
+                        "orientation": [
+                            1.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "class": "Plate"
+                    },
+                    {
+                        "name": "bread_21",
+                        "xml_path": "obj/meshes/breads/bread/bread_21/model.xml",
+                        "position": [
+                            2.4193465632010573,
+                            -3.15483156924255,
+                            1.002548619809971
+                        ],
+                        "orientation": [
+                            0.9999964571793409,
+                            -0.0004204531238487368,
+                            0.0019761843717610995,
+                            -0.0017330733579590894
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "tray_7",
+                        "xml_path": "obj/meshes/containers/tray/tray_7/model.xml",
+                        "position": [
+                            3.149967571243619,
+                            -3.025127391388798,
+                            0.9900000000000001
+                        ],
+                        "orientation": [
+                            0.0007963267107332633,
+                            0.0,
+                            0.0,
+                            0.9999996829318346
+                        ],
+                        "class": "FlatContainer"
+                    },
+                    {
+                        "name": "bread_21_1",
+                        "xml_path": "obj/meshes/breads/bread/bread_21/model.xml",
+                        "position": [
+                            1.2675558232662176,
+                            -6.284113758729339,
+                            -0.9704219609371256
+                        ],
+                        "orientation": [
+                            -0.9143613910336663,
+                            -0.010606716256629239,
+                            0.030166362082998336,
+                            -0.4036344072993623
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "bread_9",
+                        "xml_path": "obj/meshes/breads/bread/bread_9/model.xml",
+                        "position": [
+                            2.624815411815664,
+                            -3.0209711274983504,
+                            0.9274597659520163
+                        ],
+                        "orientation": [
+                            0.999947212780045,
+                            0.0006316822507257469,
+                            -0.010255337098299986,
+                            2.6305019235664656e-05
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "pan_1",
+                        "xml_path": "obj/meshes/tablewares/pans/pan_1/model.xml",
+                        "position": [
+                            3.574858576876403,
+                            -0.3838910232543677,
+                            0.9474778584284448
+                        ],
+                        "orientation": [
+                            0.9023978363627806,
+                            -0.00016260956300408422,
+                            -0.0003867610342132163,
+                            -0.43090366545412967
+                        ],
+                        "class": "FlatContainer"
+                    }
+                ],
+                "scene": {
+                    "name": "empty",
+                    "position": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "orientation": [
+                        1.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "floor_textures": [
+                        "floorplane"
+                    ],
+                    "shadow": false
+                },
+                "instructions": [
+                    "Navigate to pick the fresh bread and discard the burnt one in the bowl, then go to the stove to pan-fry the bread."
+                ],
+                "conditions": {
+                    "asyn_sequence": [
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    0.825,
+                                    1.325,
+                                    -2.9,
+                                    -2.4
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "bottom",
+                                "target_bbox": [
+                                    0.825,
+                                    1.325,
+                                    -2.9,
+                                    -2.4
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        },
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    1.9,
+                                    2.4,
+                                    -1.93,
+                                    -1.43
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "bottom",
+                                "target_bbox": [
+                                    1.9,
+                                    2.4,
+                                    -1.93,
+                                    -1.43
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        }
+                    ],
+                    "ordered_indices": [
+                        0,
+                        1
+                    ]
+                },
+                "robocasa_scene": "ONE_WALL_LARGE_0",
+                "destination_position": "bottom",
+                "fixture_surface": "stovetop_main_group",
+                "target_entity": [
+                    [
+                        "bread_21",
+                        "bread_9"
+                    ],
+                    []
+                ],
+                "target_container": [
+                    [
+                        "plate_0",
+                        "tray_7"
+                    ],
+                    [
+                        "pan_1"
+                    ]
+                ]
+            }
+        },
+        {
+            "task": {
+                "components": [
+                    {
+                        "name": "stove_0",
+                        "xml_path": "obj/meshes/containers/stovetops/stove_0/model.xml",
+                        "position": [
+                            2.75,
+                            -0.3,
+                            0.9402205882352941
+                        ],
+                        "orientation": [
+                            1.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "class": "Stove",
+                        "has_offset": true
+                    },
+                    {
+                        "name": "plate_0",
+                        "xml_path": "obj/meshes/tablewares/plates/plate_0/model.xml",
+                        "position": [
+                            2.419967571243619,
+                            -3.155127391388798,
+                            0.9789330105999999
+                        ],
+                        "orientation": [
+                            1.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "class": "Plate"
+                    },
+                    {
+                        "name": "bread_21",
+                        "xml_path": "obj/meshes/breads/bread/bread_21/model.xml",
+                        "position": [
+                            2.419368719806983,
+                            -3.1547799956737355,
+                            1.0025477520302701
+                        ],
+                        "orientation": [
+                            0.9999961892373285,
+                            -0.00040880423963380837,
+                            0.0019814269064352672,
+                            -0.0018783868953706582
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "tray_7",
+                        "xml_path": "obj/meshes/containers/tray/tray_7/model.xml",
+                        "position": [
+                            3.149967571243619,
+                            -3.025127391388798,
+                            0.9900000000000001
+                        ],
+                        "orientation": [
+                            0.0007963267107332633,
+                            0.0,
+                            0.0,
+                            0.9999996829318346
+                        ],
+                        "class": "FlatContainer"
+                    },
+                    {
+                        "name": "bread_21_1",
+                        "xml_path": "obj/meshes/breads/bread/bread_21/model.xml",
+                        "position": [
+                            0.7394498742788804,
+                            -5.052808761253721,
+                            0.03181374577638548
+                        ],
+                        "orientation": [
+                            -0.8294499742108181,
+                            -0.44803107047209056,
+                            0.15755438987863704,
+                            -0.2940365868446902
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "bread_9",
+                        "xml_path": "obj/meshes/breads/bread/bread_9/model.xml",
+                        "position": [
+                            2.624822833679092,
+                            -3.0209705413991026,
+                            0.9274597487613047
+                        ],
+                        "orientation": [
+                            0.9999472427191772,
+                            0.000622831371814919,
+                            -0.010252959623629494,
+                            2.604523924211714e-05
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "pan_1",
+                        "xml_path": "obj/meshes/tablewares/pans/pan_1/model.xml",
+                        "position": [
+                            3.5318328813491906,
+                            -0.3188968782598594,
+                            0.9474495681680687
+                        ],
+                        "orientation": [
+                            0.8079756847160985,
+                            -0.000149587900340636,
+                            -0.00022947756631375418,
+                            -0.5892157651243375
+                        ],
+                        "class": "FlatContainer"
+                    }
+                ],
+                "scene": {
+                    "name": "empty",
+                    "position": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "orientation": [
+                        1.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "floor_textures": [
+                        "floorplane"
+                    ],
+                    "shadow": false
+                },
+                "instructions": [
+                    "Navigate to pick the fresh bread and discard the burnt one in the bowl, then go to the stove to pan-fry the bread."
+                ],
+                "conditions": {
+                    "asyn_sequence": [
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    0.825,
+                                    1.325,
+                                    -2.9,
+                                    -2.4
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "bottom",
+                                "target_bbox": [
+                                    0.825,
+                                    1.325,
+                                    -2.9,
+                                    -2.4
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        },
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    1.9,
+                                    2.4,
+                                    -1.93,
+                                    -1.43
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "bottom",
+                                "target_bbox": [
+                                    1.9,
+                                    2.4,
+                                    -1.93,
+                                    -1.43
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        }
+                    ],
+                    "ordered_indices": [
+                        0,
+                        1
+                    ]
+                },
+                "robocasa_scene": "ONE_WALL_LARGE_0",
+                "destination_position": "bottom",
+                "fixture_surface": "stovetop_main_group",
+                "target_entity": [
+                    [
+                        "bread_21",
+                        "bread_9"
+                    ],
+                    []
+                ],
+                "target_container": [
+                    [
+                        "plate_0",
+                        "tray_7"
+                    ],
+                    [
+                        "pan_1"
+                    ]
+                ]
+            }
+        },
+        {
+            "task": {
+                "components": [
+                    {
+                        "name": "stove_0",
+                        "xml_path": "obj/meshes/containers/stovetops/stove_0/model.xml",
+                        "position": [
+                            2.75,
+                            -0.3,
+                            0.9402205882352941
+                        ],
+                        "orientation": [
+                            1.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "class": "Stove",
+                        "has_offset": true
+                    },
+                    {
+                        "name": "plate_0",
+                        "xml_path": "obj/meshes/tablewares/plates/plate_0/model.xml",
+                        "position": [
+                            2.419967571243619,
+                            -3.155127391388798,
+                            0.9789330105999999
+                        ],
+                        "orientation": [
+                            1.0,
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "class": "Plate"
+                    },
+                    {
+                        "name": "bread_21",
+                        "xml_path": "obj/meshes/breads/bread/bread_21/model.xml",
+                        "position": [
+                            2.4202440686529774,
+                            -3.155004395284704,
+                            1.002533717565701
+                        ],
+                        "orientation": [
+                            0.9999943557019477,
+                            -0.0004828068375039367,
+                            0.0019764979978104187,
+                            -0.0026737459620170827
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "tray_7",
+                        "xml_path": "obj/meshes/containers/tray/tray_7/model.xml",
+                        "position": [
+                            3.149967571243619,
+                            -3.025127391388798,
+                            0.9900000000000001
+                        ],
+                        "orientation": [
+                            0.0007963267107332633,
+                            0.0,
+                            0.0,
+                            0.9999996829318346
+                        ],
+                        "class": "FlatContainer"
+                    },
+                    {
+                        "name": "bread_21_1",
+                        "xml_path": "obj/meshes/breads/bread/bread_21/model.xml",
+                        "position": [
+                            2.594696065178097,
+                            -3.102825453820763,
+                            0.9474971290277402
+                        ],
+                        "orientation": [
+                            -0.04151824623810992,
+                            0.044721837882601145,
+                            -0.9981166326461866,
+                            0.00627535502991457
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "bread_9",
+                        "xml_path": "obj/meshes/breads/bread/bread_9/model.xml",
+                        "position": [
+                            2.874821210603806,
+                            -3.2293032540948055,
+                            0.9274596552575816
+                        ],
+                        "orientation": [
+                            0.9999474039657419,
+                            0.000574733192389414,
+                            -0.010240032826834054,
+                            2.6676514266851827e-05
+                        ],
+                        "class": "LongEntity"
+                    },
+                    {
+                        "name": "pan_1",
+                        "xml_path": "obj/meshes/tablewares/pans/pan_1/model.xml",
+                        "position": [
+                            3.527330872947547,
+                            -0.3183751081089732,
+                            0.9474828838663689
+                        ],
+                        "orientation": [
+                            0.8090174502012745,
+                            0.00016457793329725063,
+                            0.00012869162214558823,
+                            -0.5877845877720835
+                        ],
+                        "class": "FlatContainer"
+                    }
+                ],
+                "scene": {
+                    "name": "empty",
+                    "position": [
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "orientation": [
+                        1.0,
+                        0.0,
+                        0.0,
+                        0.0
+                    ],
+                    "floor_textures": [
+                        "floorplane"
+                    ],
+                    "shadow": false
+                },
+                "instructions": [
+                    "Navigate to pick the fresh bread and discard the burnt one in the bowl, then go to the stove to pan-fry the bread."
+                ],
+                "conditions": {
+                    "asyn_sequence": [
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    0.825,
+                                    1.325,
+                                    -2.9,
+                                    -2.4
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "bottom",
+                                "target_bbox": [
+                                    0.825,
+                                    1.325,
+                                    -2.9,
+                                    -2.4
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        },
+                        {
+                            "contain_robot_pose": {
+                                "target_bbox": [
+                                    1.9,
+                                    2.4,
+                                    -1.93,
+                                    -1.43
+                                ],
+                                "robot": "pandaomron"
+                            },
+                            "robot_orientation": {
+                                "target_orientation": "bottom",
+                                "target_bbox": [
+                                    1.9,
+                                    2.4,
+                                    -1.93,
+                                    -1.43
+                                ],
+                                "robot": "pandaomron"
+                            }
+                        }
+                    ],
+                    "ordered_indices": [
+                        0,
+                        1
+                    ]
+                },
+                "robocasa_scene": "ONE_WALL_LARGE_0",
+                "destination_position": "bottom",
+                "fixture_surface": "stovetop_main_group",
+                "target_entity": [
+                    [
+                        "bread_21",
+                        "bread_9"
+                    ],
+                    []
+                ],
+                "target_container": [
+                    [
+                        "plate_0",
+                        "tray_7"
+                    ],
+                    [
+                        "pan_1"
+                    ]
+                ]
+            }
+        }
+    ]
+}

@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rmmbench"
+version = "0.1.0"
+description = "RMMBench: robot mobile manipulation benchmark"
+requires-python = ">=3.10,<3.11"
+
+[tool.setuptools.packages.find]
+include = ["RMMBench*"]
+exclude = ["RMMBench.usd_output*", "RMMBench.assets*", "RMMBench.assets_adjustment*"]
+namespaces = true

@@ -1,0 +1,38 @@
+<mujoco model="studyroom">
+    <compiler angle="radian" autolimits="true"/>
+    <visual>
+        <map force="0.1" fogend="10" shadowclip="0.2" />
+        <headlight diffuse="0.3 0.3 0.3" ambient="0.3 0.3 0.3" specular="0.3 0.3 0.3" />
+        <quality shadowsize="16384" offsamples="16"/>
+        <global offwidth="1280" offheight="960"/>
+    </visual>
+  <default>
+    <default class="visual">
+      <geom group="2" type="mesh" contype="0" conaffinity="0"/>
+    </default>
+    <default class="collision">
+      <geom group="3" type="mesh"/>
+    </default>
+  </default>
+    <asset>
+        <texture type="skybox" builtin="gradient" rgb1=".9 .9 .9" rgb2=".9 .9 .9" width="100" height="100"/>
+        <texture file="textures/tile_grigia_caldera_porcelain_floor.png" type="2d" name="texplane"/>
+        
+        <material name="floorplane" reflectance="0.1" shininess="0.1"
+	        specular="0.3" texrepeat="3 3" texture="texplane" texuniform="true"/>
+        <texture file="textures/smooth_light_gray_plaster.png" type="2d" name="tex-wall"/>
+        <material name="walls_mat" reflectance="0.1" shininess="0.1" specular="0.3" texrepeat="3 3" texture="tex-wall" texuniform="true" />
+        <material name="white" rgba="1 1 1 1"/>
+        <material name="gray" rgba="0.753 0.753 0.753 1"/>
+        <material name="black" rgba="0.149 0.149 0.149 1"/>
+    </asset>
+
+  <worldbody>
+    <geom rgba ="0.8 0.8 0.8 1" condim="3" group="1" material="floorplane" name="floor" pos="0 0 -1" size="0.2 0.2 .125" type="plane"/>
+<!--    <geom pos="0 3 1.5" quat="0.7071 0.7071 0 0" size="3 1.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_left_visual" material="walls_mat"/>-->
+<!--    <geom pos="0 -3 1.5" quat="0.7071 -0.7071 0 0" size="3 1.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_right_visual" material="walls_mat"/>-->
+<!--    <geom pos="-3 0 1.5" quat="0.5 0.5 0.5 0.5" size="3 1.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_rear_visual" material="walls_mat"/>-->
+<!--    <geom pos="3 0 1.5" quat="0.5 0.5 -0.5 -0.5" size="3 1.5 0.01" type="box" conaffinity="0" contype="0" group="1" name="wall_front_visual" material="walls_mat"/>-->
+      <light pos="0 -0.8 5" dir="0 0 -1" directional="true" castshadow="true" diffuse="0.5 0.5 0.5" ambient="0.3 0.3 0.3" specular="0.3 0.3 0.3"/>
+  </worldbody>
+</mujoco>

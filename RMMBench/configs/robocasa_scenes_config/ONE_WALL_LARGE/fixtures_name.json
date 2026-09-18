@@ -1,0 +1,52 @@
+{
+    "room": [
+        {"name": "wall_room"},
+        {"name": "wall_backing_room"},
+        {"name": "wall_left_room"},
+        {"name": "wall_left_backing_room"},
+        {"name": "wall_right_room"},
+        {"name": "wall_right_backing_room"},
+        {"name": "floor_room"},
+        {"name": "floor_backing_room"},
+        {"name": "outlet_room"},
+        {"name": "outlet_2_room"},
+        {"name": "light_switch_room"},
+        {"name": "light_switch_2_room"},
+        {"name": "utensil_rack_room"}
+    ],
+    "main_group": [
+        {"name": "counter_main_main_group"},
+        {"name": "stovetop_main_group"},
+        {"name": "counter_1_main_group"},
+        {"name": "counter_2_main_group"},
+        {"name": "bottom_main_group"},
+        {"name": "oven_main_group"},
+        {"name": "oven_housing_main_group"},
+        {"name": "microwave_main_group"},
+        {"name": "micro_housing_main_group"},
+        {"name": "top_main_group"},
+        {"name": "fridge_main_group"},
+        {"name": "fridge_housing_main_group"},
+        {"name": "fridge_top_main_group"},
+        {"name": "cab_main_main_group"},
+        {"name": "hood_main_group"},
+        {"name": "shelves_main_group"},
+        {"name": "cab_2_main_group"},
+        {"name": "stack_3_main_group"},
+        {"name": "stack_4_main_group"},
+        {"name": "stack_5_main_group"},
+        {"name": "stack_6_main_group"}
+
+    ],
+    "island_group": [
+        {"name": "sink_island_group"},
+        {"name": "island_counter_island_group"},
+        {"name": "island_stack_1_island_group"},
+        {"name": "dishwasher_island_group"},
+        {"name": "island_panel_cab_right_island_group"},
+        {"name": "island_cab_left_island_group"},
+        {"name": "island_panel_cab_left_island_group"},
+        {"name": "island_base_box_island_group"}
+
+    ]
+}

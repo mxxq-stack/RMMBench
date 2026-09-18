@@ -1,0 +1,1 @@
+from RMMBench.robots.dual_arm.base import DualArm

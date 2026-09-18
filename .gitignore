@@ -1,0 +1,43 @@
+# 大体积资产（约 19G），不入库，通过 download_assets.sh 下载
+RMMBench/assets/obj/
+RMMBench/assets/scenes_fixtures/
+
+# graspnet-baseline（README 中有克隆步骤，不入库）
+graspnet_baseline/
+
+# pip -e git+... 生成的依赖克隆目录（由 requirements.txt 自动重建）
+src/
+
+# Omniverse USD 生成产物（pyproject 打包时也已排除）
+RMMBench/usd_output/
+
+# 资产调整脚本目录（pyproject 打包时也已排除）
+RMMBench/assets_adjustment/
+
+# Python 产物
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# 日志与临时文件
+*.log
+*.npy
+*.tar
+*.tar.gz

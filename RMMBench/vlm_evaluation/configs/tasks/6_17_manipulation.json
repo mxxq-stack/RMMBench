@@ -1,0 +1,13 @@
+{
+  "cook_steak": ["cook_steak"],
+  "wash_fruit_tidy_table":
+  ["wash_fruit_tidy_table"],
+  "wash_meat_organize_cheese":
+  [
+    "wash_meat_organize_cheese_on_tray_commonsense"],
+  "ice_entity_in_fridge":["ice_cola_in_fridge"],
+  "cluster": [
+    "cluster_snacks_vs_fruits",
+    "cluster_bottled_vs_canned",
+    "cluster_vegetables_vs_fruits"]
+}

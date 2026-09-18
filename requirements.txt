@@ -1,0 +1,23 @@
+dm-control==1.0.22
+mujoco==3.2.2
+glfw==2.10.0
+numpy==1.25.0
+scipy==1.14.0
+sympy==1.14.0
+scikit-learn==1.7.2
+trimesh==4.9.0
+open3d==0.18.0
+opencv-python==4.11.0.86
+torch==2.9.0
+openai==2.6.0
+requests==2.32.5
+pydantic==2.12.3
+pillow==12.0.0
+mediapy==1.2.0
+imageio==2.37.0
+matplotlib==3.10.7
+h5py==3.11.0
+PyYAML==6.0.3
+tqdm==4.67.1
+colorlog==6.10.1
+-e git+https://github.com/motion-planning/rrt-algorithms.git#egg=rrt-algorithms

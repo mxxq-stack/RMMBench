@@ -1,0 +1,87 @@
+{
+    "room": [
+        {"name": "wall_room"},
+        {"name": "wall_backing_room"},
+        {"name": "wall_front_room"},
+        {"name": "wall_front_backing_room"},
+        {"name": "wall_left_room"},
+        {"name": "wall_left_backing_room"},
+        {"name": "wall_left_2_room"},
+        {"name": "wall_2_left_backing_room"},
+        {"name": "wall_right_room"},
+        {"name": "wall_right_backing_room"},
+        {"name": "utensil_rack_room"},
+        {"name": "outlet_room"},
+        {"name": "outlet_2_room"},
+        {"name": "outlet_3_room"},
+        {"name": "light_switch_room"},
+        {"name": "light_switch_2_room"},
+        {"name": "floor_room"},
+        {"name": "floor_backing_room"},
+        {"name": "floor_front_room"},
+        {"name": "floor_front_backing_room"}
+    ],
+    "main_group": [
+        {"name": "counter_main_main_group"},
+        {"name": "stove_main_group"},
+        {"name": "counter_1_main_group"},
+        {"name": "counter_corner_2_main_group"},
+        {"name": "cab_corner_main_group"},
+        {"name": "cab_main_main_group"},
+        {"name": "cab_1_main_group"},
+        {"name": "hood_main_group"},
+        {"name": "shelves_main_group"},
+        {"name": "cab_corner_3_main_group"},
+        {"name": "cab_corner_4_main_group"},
+        {"name": "stack_1_main_group"},
+        {"name": "stack_2_main_group"},
+        {"name": "right_corner_box_main_group"},
+        {"name": "stack_3_main_group"},
+        {"name": "stack_4_main_group"},
+        {"name": "coffee_machine_main_group"},
+        {"name": "utensil_holder_main_group"},
+        {"name": "plant_main_group"},
+        {"name": "toaster_main_group"}
+    ],
+    "left_group": [
+        {"name": "fridge_left_group"},
+        {"name": "fridge_housing_left_group"},
+        {"name": "fridge_top_left_group"},
+        {"name": "stack_left_left_group"},
+        {"name": "stack_right_left_group"},
+        {"name": "box_left_top_left_group"},
+        {"name": "box_left_bottom_left_group"},
+        {"name": "box_right_top_left_group"},
+        {"name": "box_right_bottom_left_group"}
+    ],
+    "right_group": [
+        {"name": "sink_right_group"},
+        {"name": "counter_1_right_group"},
+        {"name": "counter_corner_right_group"},
+        {"name": "stack_1_right_group"},
+        {"name": "dishwasher_right_group"},
+        {"name": "stack_2_right_group"},
+        {"name": "cab_1_right_group"},
+        {"name": "cab_2_right_group"},
+        {"name": "window_group_right_group"},
+        {"name": "paper_towel_right_group"}
+    ],
+    "front_group": [
+        {"name": "counter_1_front_group"},
+        {"name": "stack_1_front_group"},
+        {"name": "shelves_front_group"},
+        {"name": "bottom_front_group"},
+        {"name": "cab_middle_front_group"},
+        {"name": "microwave_front_group"},
+        {"name": "micro_housing_front_group"},
+        {"name": "top_front_group"}
+    ],
+    "island_group": [
+        {"name": "island_island_group"}
+    ],
+    "stool_group": [
+        {"name": "stool_1_stool_group"},
+        {"name": "stool_2_stool_group"},
+        {"name": "stool_3_stool_group"}
+    ]
+}

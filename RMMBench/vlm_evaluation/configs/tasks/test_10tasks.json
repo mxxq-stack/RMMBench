@@ -1,0 +1,24 @@
+{
+  "navigate_to_make_steak": [
+    "navigate_to_make_steak"
+  ],
+  "navigate_to_refrigerator": [
+    "navigate_to_refrigerator_0",
+    "navigate_to_refrigerator_2"
+  ],
+  "select_entity_closest_juicer": [
+    "select_fruit_closest_juicer",
+    "select_drink_closest_juicer"
+  ],
+  "select_entity_closest_robot": [
+    "select_condiment_closest_robot",
+    "select_drink_closest_robot"
+  ],
+  "select_entity_by_ordinal": [
+    "select_fruit_left"
+  ],
+  "cluster": [
+    "cluster_drinks_vs_condiments",
+    "cluster_vegetables_vs_fruits"
+  ]
+}

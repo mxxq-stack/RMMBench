@@ -1,0 +1,23 @@
+<mujoco>
+    <compiler angle="radian"/>
+    <size memory="5000M"/>
+    <option impratio="10"
+            timestep="0.001" 
+            density="1.225" 
+            viscosity="1.8e-5"  
+            integrator="implicitfast">
+        <flag multiccd="enable"/>
+    </option>
+    <include file="./camera.xml"/>
+<!--    <include file="./camera_kitchen_1.xml"/>-->
+
+    <statistic extent="0.5" center="0 -.5 0"/>
+    <visual>
+        <map force="0.1" fogend="10" shadowclip="0.2" />
+        <headlight diffuse="0.3 0.3 0.3" ambient="0.3 0.3 0.3" specular="0.3 0.3 0.3" />
+        <quality shadowsize="16384" offsamples="16"/>
+        <global offwidth="1280" offheight="960"/>
+    </visual>
+    <worldbody>
+    </worldbody>
+</mujoco>

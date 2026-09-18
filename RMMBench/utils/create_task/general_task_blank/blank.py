@@ -1,0 +1,110 @@
+import os
+import re
+from pathlib import Path
+
+def create_rmmbench_task_placeholder(task_name, task_list, base_path=None):
+    """
+    Automate creation of empty task files and registration of the config mapping, appending the mapping
+    to the end of the name2config dictionary.
+    """
+    # 1. Define the paths
+    vlabench_primitive_dir = os.path.join(base_path, "RMMBench/tasks/vlabench_primitive")
+    robocasa_init_path = os.path.join(vlabench_primitive_dir, "__init__.py")
+    config_init_path = os.path.join(base_path, "RMMBench/configs/__init__.py")
+    new_task_file = os.path.join(vlabench_primitive_dir, f"{task_name}.py")
+
+    # --- Step 1: create an empty task_name.py ---
+    if not os.path.exists(new_task_file):
+        with open(new_task_file, "w") as f:
+            pass
+        print(f"Successfully created empty file: {new_task_file}")
+    else:
+        print(f"File {task_name}.py already exists.")
+
+    # --- Step 2: update the imports in __init__.py ---
+    import_line = f"from RMMBench.tasks.vlabench_primitive.{task_name} import *\n"
+    with open(robocasa_init_path, "r") as f:
+        robocasa_init_content = f.read()
+
+    if import_line not in robocasa_init_content:
+        with open(robocasa_init_path, "a") as f:
+            if robocasa_init_content and not robocasa_init_content.endswith('\n'):
+                f.write('\n')
+            f.write(import_line)
+        print(f"Added import to {robocasa_init_path}")
+
+    # --- Step 3: update the end of the name2config dictionary in configs/__init__.py ---
+    with open(config_init_path, "r") as f:
+        content = f.read()
+
+    # Check whether the key already exists
+    if f'"{task_name}":' not in content:
+        # Core logic: find the last closing brace before the end of the name2config dictionary
+        # Use a regex to match the last '}', making sure it looks like the dictionary's ending
+        # [ \t]* matches any possible indentation
+        pattern = r"(name2config\s*=\s*\{.*?)(\n\s*\})"
+
+        # Build the new entry: note the leading indentation and the trailing comma
+        new_entry = f'\n    "{task_name}": {task_list},'
+
+        # Use re.DOTALL to match across lines
+        if re.search(pattern, content, re.DOTALL):
+            # \1 is the dictionary body, \2 is the trailing newline + closing brace
+            updated_content = re.sub(pattern, f"\\1{new_entry}\\2", content, flags=re.DOTALL)
+
+            with open(config_init_path, "w") as f:
+                f.write(updated_content)
+            print(f"Successfully appended '{task_name}' to the end of name2config.")
+        else:
+            # If the regex match fails (e.g., an extremely unusual format), fall back to a simple replacement
+            print("Regex match failed, trying fallback...")
+            updated_content = content.replace("}", f'    "{task_name}": {task_list},\n}}', 1)
+    else:
+        print(f"Mapping for '{task_name}' already exists.")
+
+
+# --- Usage example ---
+if __name__ == "__main__":
+    # Define the task mapping: {task_name: task_list}
+    tasks_to_process = {
+#         "select_entity_closest_juicer": [
+#     "select_fruit_closest_juicer",
+#     "select_ingredient_closest_juicer",
+#     "select_bread_closest_juicer",
+#     "select_dessert_closest_juicer",
+#     "select_condiment_closest_juicer",
+#     "select_drink_closest_juicer"
+# ],
+        "select_entity_closest_robot": [
+            "select_fruit_closest_robot",
+            "select_snack_closest_robot",
+            "select_bread_closest_robot",
+            "select_dessert_closest_robot",
+            "select_condiment_closest_robot",
+            "select_drink_closest_robot",
+            "mix_select_fruit_closest_robot"
+        ],
+#         "select_entity_by_ordinal": [
+#             "select_fruit_left",
+#             "select_snack_left",
+#             "select_condiment_right",
+#             "select_drink_2nd_right"
+#         ],
+#         "cluster": [
+#             "cluster_breads_vs_desserts",
+#             "cluster_snacks_vs_fruits",
+#             "cluster_drinks_vs_condiments",
+#             "cluster_vegetables_vs_meat",
+#             "cluster_bottled_vs_canned",
+#             "cluster_vegetables_vs_fruits"
+#
+#         ]
+    }
+
+    current_file = Path(__file__).resolve()
+    vla_root = str(current_file.parents[4])
+    print("vla_root:", vla_root)
+    # Batch loop invocation
+    for name, list_items in tasks_to_process.items():
+        create_rmmbench_task_placeholder(name, list_items,vla_root)
+        print(f"已生成任务占位符: {name}")

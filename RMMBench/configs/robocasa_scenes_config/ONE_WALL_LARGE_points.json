@@ -1,0 +1,62 @@
+{
+    "counter": [
+        {
+            "name": "counter_main_main_group",
+            "placecenter": [
+                1.75,
+                -0.325,
+                1.02
+            ],
+            "size": [
+                1,
+                0.65,
+                0.92
+            ]
+        },
+        {
+            "name": "counter_1_main_group",
+            "placecenter": [
+                2.75,
+                -0.325,
+                1.02
+            ],
+            "size": [
+                1,
+                0.65,
+                0.92
+            ]
+        },
+        {
+            "name": "counter_2_main_group",
+            "placecenter": [
+                4.15,
+                -0.325,
+                1.02
+            ],
+            "size": [
+                1.8,
+                0.65,
+                0.92
+            ],
+          "camera": {
+            "pos":"3 -0.975  1.42"
+
+          }
+
+
+        },
+        {
+            "name": "island_counter_island_group",
+            "placecenter": [
+                2.7499073464103394,
+                -2.649999995707656,
+                1.02
+            ],
+            "size": [
+                2.75,
+                1.4,
+                0.92
+            ]
+        }
+    ]
+}

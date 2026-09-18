@@ -1,0 +1,155 @@
+{
+  "ONE_WALL_LARGE": {
+
+    "main_group": [
+        {"name": "knife_block_main_group"},
+        {"name": "toaster_main_group"},
+        {"name": "paper_towel_main_group"},
+        {"name": "coffee_machine_main_group"}
+    ],
+    "island_group": [
+        {"name": "stool_1_island_group"},
+        {"name": "stool_2_island_group"},
+        {"name": "stool_3_island_group"}
+    ]
+  },
+  "G_SHAPED_LARGE": {
+
+    "main_group": [
+        {"name": "coffee_machine_main_group"},
+        {"name": "toaster_main_group"},
+        {"name": "utensil_holder_main_group"}
+    ],
+    "front_group": [
+        {"name": "stool_1_front_group"},
+        {"name": "stool_2_front_group"},
+        {"name": "stool_3_front_group"}
+    ],
+    "left_group": [
+        {"name": "plant_left_group"},
+        {"name": "paper_towel_left_group"}
+    ],
+    "right_group": [
+    ]
+},
+  "G_SHAPED_SMALL": {
+
+    "main_group": [
+        {"name": "toaster_main_group"},
+        {"name": "knife_block_main_group"}
+    ],
+    "front_group": [
+        {"name": "plant_front_group"},
+        {"name": "stool_1_front_group"},
+        {"name": "stool_2_front_group"}
+    ],
+    "left_group": [
+        {"name": "coffee_machine_left_group"},
+        {"name": "utensil_holder_left_group"}
+    ],
+    "right_group": [
+        {"name": "paper_towel_right_group"}
+    ]
+},
+  "GALLEY": {
+
+    "left_group": [
+        {"name": "paper_towel_left_group"}
+    ],
+    "main_group": [
+        {"name": "coffee_machine_main_group"},
+        {"name": "utensil_holder_main_group"},
+        {"name": "toaster_main_group"},
+        {"name": "knife_block_main_group"}
+    ]
+},
+  "L_SHAPED_LARGE": {
+
+    "main_group": [
+        {"name": "toaster_main_group"},
+        {"name": "utensil_holder_main_group"}
+    ],
+    "left_group": [
+        {"name": "coffee_machine_left_group"},
+        {"name": "paper_towel_left_group"},
+        {"name": "knife_block_left_group"},
+        {"name": "plant_left_group"}
+    ],
+    "stool_group": [
+        {"name": "stool_1_stool_group"},
+        {"name": "stool_2_stool_group"},
+        {"name": "stool_3_stool_group"}
+    ]
+},
+  "L_SHAPED_SMALL":{
+    "main_group": [
+        {"name": "plant_main_group"},
+        {"name": "knife_block_main_group"},
+        {"name": "paper_towel_main_group"}
+    ],
+    "right_group": [
+        {"name": "toaster_right_group"},
+        {"name": "coffee_machine_right_group"}
+    ]
+},
+  "ONE_WALL_SMALL": {
+    "main_group": [
+        {"name": "coffee_machine_main_group"},
+        {"name": "toaster_main_group"},
+        {"name": "knife_block_main_group"},
+        {"name": "paper_towel_main_group"}
+    ]
+},
+  "U_SHAPED_LARGE": {
+    "main_group": [
+        {"name": "knife_block_main_group"},
+        {"name": "paper_towel_main_group"},
+        {"name": "utensil_holder_main_group"}
+    ],
+    "island_group": [
+        {"name": "stool_1_island_group"},
+        {"name": "stool_2_island_group"},
+        {"name": "stool_3_island_group"}
+    ],
+    "left_group": [
+        {"name": "shelves_left_group"},
+        {"name": "cab_2_left_group"}
+    ],
+    "right_group": [
+        {"name": "fridge_cab_right_group"},
+        {"name": "coffee_machine_right_group"},
+        {"name": "toaster_right_group"}
+    ]
+},
+  "U_SHAPED_SMALL": {
+    "main_group": [
+        {"name": "toaster_main_group"},
+        {"name": "plant_main_group"}
+    ],
+    "right_group": [
+        {"name": "knife_block_right_group"},
+        {"name": "utensil_holder_right_group"}
+    ],
+    "left_group": [
+        {"name": "coffee_machine_left_group"},
+        {"name": "paper_towel_left_group"}
+    ]
+},
+  "WRAPAROUND": {
+    "main_group": [
+        {"name": "coffee_machine_main_group"},
+        {"name": "utensil_holder_main_group"},
+        {"name": "plant_main_group"},
+        {"name": "toaster_main_group"}
+    ],
+    "right_group": [
+        {"name": "window_group_right_group"},
+        {"name": "paper_towel_right_group"}
+    ],
+    "stool_group": [
+        {"name": "stool_1_stool_group"},
+        {"name": "stool_2_stool_group"},
+        {"name": "stool_3_stool_group"}
+    ]
+}
+}

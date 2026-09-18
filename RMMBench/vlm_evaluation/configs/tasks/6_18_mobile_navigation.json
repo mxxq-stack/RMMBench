@@ -1,0 +1,9 @@
+{
+    "navigate_to_refrigerator": [
+      "navigate_to_refrigerator_0",
+      "navigate_to_refrigerator_1"],
+      "navigate_composite_to_cook":
+      ["navigate_to_cook_0"],
+      "navigate_composite_to_wash_cook":
+      ["navigate_to_wash_fruit_cook_steak_unordered"]
+}

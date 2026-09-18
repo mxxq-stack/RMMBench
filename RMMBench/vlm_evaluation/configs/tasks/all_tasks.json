@@ -1,0 +1,119 @@
+{
+  "composite_navigation": {
+    "navigate_to_make_steak": [
+      "navigate_to_make_steak",
+   "navigate_composite_to_tidy_0"
+    ],
+    "navigate_to_refrigerator": ["navigate_to_refrigerator_0", "navigate_to_refrigerator_1","navigate_to_refrigerator_2"],
+    "navigate_composite_to_wash_cook": ["navigate_to_wash_fruit_cook_steak_unordered", "navigate_to_wash_fruit_cook_steak_ordered"],
+    "navigate_composite_to_cook": ["navigate_to_cook_0", "navigate_to_cook_1"],
+    "navigate_composite_to_wash": ["navigate_composite_to_wash_fruit"],
+    "navigate_composite_to_tidy": ["navigate_composite_to_tidy_0", "navigate_composite_to_tidy_1"]
+  },
+  "navigation":{
+
+  },
+  "manipulation": {
+    "strict": {
+      "test_texture": ["test_texture"],
+        "ice_entity_in_fridge":
+        ["ice_cola_in_fridge"],
+
+      "select_from_tray": [
+        "select_from_tray"
+      ],
+      "select_entity_closest_juicer": [
+        "select_fruit_closest_juicer",
+        "select_ingredient_closest_juicer",
+        "select_bread_closest_juicer",
+        "select_dessert_closest_juicer",
+        "select_condiment_closest_juicer",
+        "select_drink_closest_juicer"
+      ],
+      "select_entity_from_pan": [
+        "select_fruit_from_pan",
+        "select_ingredient_from_pan",
+        "select_bread_from_pan"
+      ],
+      "select_entity_closest_robot": [
+        "select_fruit_closest_robot",
+        "select_snack_closest_robot",
+        "select_bread_closest_robot",
+        "select_dessert_closest_robot",
+        "select_condiment_closest_robot",
+        "select_drink_closest_robot"
+      ],
+      "select_entity_by_ordinal": [
+        "select_fruit_left",
+        "select_snack_left",
+        "select_condiment_right",
+        "select_drink_2nd_right"
+      ],
+      "wash_fruit_tidy_table": [
+        "wash_fruit",
+        "wash_fruit_semantic",
+       "wash_fruit_commonsense"
+      ],
+      "cool_milk_serve_bread": [
+        "cool_milk_in_sink",
+        "cool_milk_in_sink_semantic",
+        "cool_milk_in_sink_commonsense"
+      ],
+      "wash_meat_organize_cheese": [
+        "wash_meat_in_sink",
+        "wash_meat_in_sink_semantic",
+        "wash_meat_in_sink_commonsense"
+      ],
+      "ice_juice_arrange_cake": [
+        "ice_juice_bottle_in_sink",
+        "ice_juice_bottle_in_sink_semantic",
+        "ice_juice_bottle_in_sink_commonsense"
+      ],
+      "ice_cola_move_snacks": [
+        "ice_cola_in_sink",
+        "ice_cola_in_sink_semantic",
+        "ice_cola_in_sink_commonsense"
+      ]
+    },
+    "flexible": {
+      "cook_steak": ["cook_steak"],
+       "wash_fruit_tidy_table": [
+        "wash_fruit_tidy_table",
+        "wash_fruit_tidy_table_semantic",
+       "wash_fruit_tidy_table_commonsense"
+      ],
+      "cool_milk_serve_bread": [
+        "cool_milk_serve_bread_on_tray",
+        "cool_milk_serve_bread_on_tray_semantic",
+        "cool_milk_serve_bread_on_tray_commonsense"
+      ],
+      "wash_meat_organize_cheese": [
+        "wash_meat_organize_cheese_on_tray",
+        "wash_meat_organize_cheese_on_tray_semantic",
+        "wash_meat_organize_cheese_on_tray_commonsense"
+      ],
+      "ice_juice_arrange_cake": [
+        "ice_juice_arrange_cake_on_tray",
+        "ice_juice_arrange_cake_on_tray_semantic",
+        "ice_juice_arrange_cake_on_tray_commonsense"
+      ],
+      "ice_cola_move_snacks": [
+        "ice_cola_move_snacks_to_tray",
+        "ice_cola_move_snacks_to_tray_semantic",
+        "ice_cola_move_snacks_to_tray_commonsense"
+      ],
+      "clean_billiards_stack_blocks": [
+        "clean_billiards_in_sink",
+        "clean_billiards_stack_blocks_on_tray"
+      ],
+      "cluster": [
+        "cluster_breads_vs_desserts",
+        "cluster_snacks_vs_fruits",
+        "cluster_drinks_vs_condiments",
+        "cluster_vegetables_vs_meat",
+        "cluster_bottled_vs_canned",
+        "cluster_vegetables_vs_fruits"
+      ]
+    }
+  }
+}
