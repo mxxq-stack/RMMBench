@@ -37,7 +37,7 @@ def get_args():
     # VLM related
     parser.add_argument('--vlm-url', default="https://api.deepseek.com/chat/completions", type=str,
                         help='VLM server URL (OpenAI-compatible chat/completions endpoint)')
-    parser.add_argument('--api-key', default="sk-f3666b93bf824c38ad7c083f2f4a9506", type=str,
+    parser.add_argument('--api-key', default="", type=str,
                         help='API key for VLM service (e.g. DeepSeek). Falls back to env DEEPSEEK_API_KEY if not provided')
     parser.add_argument('--vlm-backend', default="deepseek-flash", type=str)
     # prompt_format is fixed to "openai" (vlm_client sends requests via the official OpenAI-compatible protocol).
