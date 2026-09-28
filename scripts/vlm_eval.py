@@ -58,9 +58,15 @@ def get_args():
     # Evaluation settings
     parser.add_argument('--max-skills-num', default=15, type=int, help='Max number of skills per episode')
     parser.add_argument('--robot', default="pandaomron", type=str, help='Robot name')
-    parser.add_argument('--select-grasp', default=False, help='Whether to perform a grab selection when picking')
     parser.add_argument('--use-graspnet', action='store_true', default=False,
                         help='Enable GraspNet candidate grasping during pick (passed into SkillLib.pick)')
+    # Prompt assembly switches
+    parser.add_argument('--collision-feedback', action='store_true', default=False,
+                        help='Enable collision feedback attention (moveforward blocked) in history steps '
+                             '(only effective for composite_navigation tasks)')
+    parser.add_argument('--no-reasoning-in-history', action='store_true', default=False,
+                        help='Drop the reasoning field from history steps to save tokens '
+                             '(appends to both manipulation and composite_navigation prompts)')
     parser.add_argument('--early-stop', action="store_true", default=False, help='Early stop when skill fails')
     parser.add_argument('--visual-rays', action="store_true", default=False,
                         help='Enable visual ray assistance: only takes effect for composite_navigation tasks; '
@@ -363,16 +369,23 @@ def evaluate_single_episode(args, task_name, episode_config, config_idx, logger,
     # Note: task_category is passed in by the caller (manipulation / composite_navigation), no longer hardcoded
 
     # Initialize VLM handler
+    # Extract the actual VLM image size (width, height) from the env observation,
+    # replacing the previous hardcoded (480, 720) whose axes were also swapped
+    reset_rgb = env.get_observation()["rgb"]
+    img_size = (int(reset_rgb[5].shape[1]), int(reset_rgb[5].shape[0]))  # (width, height) of the head camera
+    print(f"[vlm_eval] VLM image size (width, height) extracted from env observation: {img_size}")
 
     handler = VLAMessageHandler(
         env=env,
         history_maxlen=args.history_maxlen,
-        img_size=(480, 480),
+        img_size=img_size,
         vlm_url=args.vlm_url,
         api_key=args.api_key,
         vlm_backend=args.vlm_backend,
         prompt_format="openai",
-        task_category=task_category
+        task_category=task_category,
+        collision_feedback_open=args.collision_feedback,
+        include_reasoning_in_history=not args.no_reasoning_in_history,
     )
 
     if img_dir is not None:
@@ -636,6 +649,53 @@ def evaluate_single_episode(args, task_name, episode_config, config_idx, logger,
                     placement_th=height,
                     bbox=bbox)()
 
+
+        elif action == "open_door":
+            # [DEBUG-BBOX-MAP] Map the bbox to the container entity name (same entity-level mapping as place;
+            # open_door takes target_container_name, i.e. a key of env.task.entities, not the pick-style body_name)
+            door_target = None
+            if bbox is not None:
+                door_target = get_entity_from_bbox(
+                    env,
+                    bbox=bbox,
+                    target_entity_name=target_object,
+                    cam_id=5,  # head camera
+                    min_ratio=0.05
+                )
+
+                print(f"[DEBUG-BBOX-MAP] open_door bbox={bbox} -> entity={door_target}")
+
+            # Guard: the mapped name must be a key of env.task.entities, otherwise SkillLib.open_door raises KeyError
+            if door_target is not None and door_target not in env.task.entities:
+                print(f"[DEBUG-BBOX-MAP] open_door mapped entity {door_target} not in env.task.entities, discard")
+                door_target = None
+
+            # [DEBUG-BBOX-MAP] fallback: if bbox mapping fails, fall back to the original prefix matching
+            if door_target is None and target_object is not None:
+                matches = [item for item in all_entities if item.startswith(target_object)]
+                if matches:
+                    door_target = matches[0]
+                    print(f"[DEBUG-BBOX-MAP] open_door fallback to prefix match: {door_target}")
+
+            # When the mapping succeeds, write the matched entity back into the skill record; preferred over the VLM's raw target when matching RRact params
+            if door_target is not None:
+                vlm_skill_seq[-1]['matched_target'] = door_target
+
+            # 1. IoU computation (head camera view, same as place)
+            if door_target is not None and bbox is not None:
+                iou, mask = calculate_mask_bbox_iou(env, door_target, bbox, 5)
+                save_mask(img_dir, step_idx, action, vlm_img_input[5], pts, mask)
+            else:
+                iou = 0
+            if bbox is not None:
+                iou_list.append(iou)
+
+            # 2. Execute: skip the skill when the mapping failed (placeholder, consistent with place)
+            if door_target is None:
+                obs, waypoints, stage_success, task_success = [None], [None], False, False
+            else:
+                obs, waypoint, stage_success, task_success = skill_factory(
+                    target_container_name=door_target)()
 
         elif action in ["moveforward", "rotate_right", "rotate_left"]:
             if action == "moveforward":

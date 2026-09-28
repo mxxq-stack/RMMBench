@@ -21,7 +21,7 @@ class WashPlaceCarrotConfigManager(Multi_traget_container):
     - fixture_surface: island_island_group
     - destination_position: top
     - robot: position [3.200067173852504, -3.800115813660509, 0.0], euler [0, 0, -1.57]
-    - inherited: Multi_traget_container (both target_entity and target_container are lists)
+    - Inherits: Multi_traget_container (both target_entity and target_container are lists)
     """
 
     def __init__(self, task_name, num_objects=[2, 1], **kwargs):
@@ -48,10 +48,10 @@ class WashPlaceCarrotConfigManager(Multi_traget_container):
 
     def get_condition_config(self, target_entity, target_container, **kwargs):
         """
-        Success condition: the target object is first placed into the sink to be washed, then finally placed into the target container.
+        Success condition: the target object is first placed into the sink for washing, and finally placed into the target container.
         In Multi_traget_container, target_container is a list; take the first element as the final container.
         target_entity is a list containing all target objects that need to be washed.
-        Each object gets its own asyn_sequence: sink first, then container.
+        Each object gets an independent asyn_sequence: sink first → then container.
         """
         container = target_container[0] if isinstance(target_container, list) else target_container
         sink = "sink_0"
@@ -78,7 +78,7 @@ class WashPlaceCarrotConfigManager(Multi_traget_container):
 
     def get_instruction(self, target_entity, target_container, **kwargs):
         """
-        Generate the instruction text using declarative sentences, without exposing specific operation steps.
+        Generate the instruction text in declarative style, without exposing concrete operation steps.
         """
         instruction = [
             "I want to eat the carrot, please wash it and put it on the plate."
@@ -93,7 +93,7 @@ class WashPlaceCarrotTask(PrimitiveSeqTask):
     Task class for wash_fruit_veg task.
 
     Task flow: pick → wash → place → end
-    Objects that need to be fixed: plate (the container is placed on the countertop and must be attached to the arena)
+    Objects that need to be fixed: plate (container placed on the countertop, must be attached to the arena)
     """
 
     def __init__(self, task_name, robot, **kwargs):
@@ -111,7 +111,7 @@ class WashPlaceCarrotTask(PrimitiveSeqTask):
 
     def reset_entities_positions(self):
         """
-        Height adaptation: adjust the z coordinate according to each object's own height
+        Height adaptation: adjust the z coordinate based on each object's own height
         to avoid initial penetration/clipping.
         """
         if self.config_manager.all_entities is not None:
@@ -127,8 +127,8 @@ class WashPlaceCarrotTask(PrimitiveSeqTask):
 
     def get_expert_skill_sequence(self, physics):
         """
-        Expert skill sequence: open the sink once first, then for each object run pick → place (sink) → pick → place (container) → observe, and finally end.
-        Only one object is in the sink at a time, to guarantee grasp success rate.
+        Expert skill sequence: open the sink once first, then for each object perform pick → place(sink) → pick → place(container) → observe, ending with end.
+        Only one object is in the sink at a time, to ensure grasp success rate.
         """
         target_entities = self.config_manager.target_entity
         container_name = self.target_container[0] if isinstance(self.target_container, list) else self.target_container
@@ -141,6 +141,7 @@ class WashPlaceCarrotTask(PrimitiveSeqTask):
             skill_sequence.extend([
                 partial(SkillLib.pick, target_entity_name=entity),
                 partial(SkillLib.place, target_container_name="sink_0"),
+                partial(SkillLib.observe),
                 partial(SkillLib.pick, target_entity_name=entity),
                 partial(SkillLib.place, target_container_name=container_name),
                 partial(SkillLib.observe),

@@ -1,8 +1,8 @@
 import random
 from functools import partial
 
-from RMMBench.tasks.base_task import PrimitiveTask
 from RMMBench.tasks.config_manager import Multi_traget_container
+from RMMBench.tasks.base_task import PrimitiveSeqTask
 from RMMBench.utils.register import register
 from RMMBench.utils.skill_lib import SkillLib
 
@@ -50,10 +50,17 @@ class ReheatSteakConfigManager(Multi_traget_container):
         Success condition: all target objects are placed inside the microwave.
         target_entity is a list containing all target objects that need to be placed.
         """
+
         conditions_config = dict(
-            contain=dict(
+            asyn_sequence=dict(
+                condition_sets=[
+                    dict(is_open=dict(container="microwave_1")),
+                    dict(contain=dict(
                 container="microwave_1",
                 entities=target_entity,
+                    )),
+                ],
+                ordered_indices=[0, 1],
             )
         )
         self.config["task"]["conditions"] = conditions_config
@@ -70,7 +77,7 @@ class ReheatSteakConfigManager(Multi_traget_container):
 
 
 @register.add_task("reheat_steak_0")
-class ReheatSteakTask(PrimitiveTask):
+class ReheatSteakTask(PrimitiveSeqTask):
     """
     Task class for reheat_microwave task.
 
@@ -86,9 +93,6 @@ class ReheatSteakTask(PrimitiveTask):
         super().build_from_config(eval, **kwargs)
         self.reset_entities_positions()
         self.attach_entities_to_arena()
-
-    def initialize_episode(self, physics, random_state):
-        super().initialize_episode(physics, random_state)
 
     def reset_entities_positions(self):
         """
@@ -108,24 +112,6 @@ class ReheatSteakTask(PrimitiveTask):
                     height = 0.015
                 entity.init_pos[2] += height
 
-    # def get_expert_skill_sequence(self, physics):
-    #     """
-    #     Expert skill sequence: multi-target pick → place → observe loop, followed by end.
-    #     target_entity is a list and target_container is also a list.
-    #     All target objects are placed into the same container.
-    #     """
-    #     target_entities = self.config_manager.target_entity
-    #     container_name = self.target_container[0] if isinstance(self.target_container, list) else self.target_container
-    #     skill_sequence = []
-    #     for entity in target_entities:
-    #         skill_sequence.extend([
-    #             partial(SkillLib.pick, target_entity_name=entity),
-    #             partial(SkillLib.place, target_container_name=container_name),
-    #             partial(SkillLib.observe),
-    #         ])
-    #     skill_sequence.extend([partial(SkillLib.end)])
-    #     skill_sequence = self.remove_second_last(skill_sequence)
-    #     return skill_sequence
 
     def get_expert_skill_sequence(self, physics):
         """

@@ -1,7 +1,7 @@
 import random
 from functools import partial
 
-from RMMBench.tasks.base_task import PrimitiveTask
+from RMMBench.tasks.base_task import PrimitiveSeqTask
 from RMMBench.tasks.config_manager import Multi_traget_container
 from RMMBench.utils.register import register
 from RMMBench.utils.skill_lib import SkillLib
@@ -47,15 +47,22 @@ class StoreLambChickenConfigManager(Multi_traget_container):
 
     def get_condition_config(self, target_entity, target_container, **kwargs):
         """
-        Success condition: all target objects are placed inside the container and at rest.
+        Success condition: first open the fridge door, then place all target objects inside the fridge.
         In Multi_traget_container, target_container is a list; take the first element as the detection container.
-        target_entity is a list containing all target objects that need to be placed.
+        Corresponding expert sequence: pick(fridge) → open_door(fridge) → pick/place loop.
+        The small_fridge entity class has its own is_open(physics) check (door joint angle > 0.785 rad).
         """
         container = target_container[0] if isinstance(target_container, list) else target_container
         conditions_config = dict(
-            contain=dict(
-                container=container,
-                entities=target_entity,
+            asyn_sequence=dict(
+                condition_sets=[
+                    dict(is_open=dict(container=container)),
+                    dict(contain=dict(
+                        container=container,
+                        entities=target_entity,
+                    )),
+                ],
+                ordered_indices=[0, 1],
             )
         )
         self.config["task"]["conditions"] = conditions_config
@@ -74,7 +81,7 @@ class StoreLambChickenConfigManager(Multi_traget_container):
 
 
 @register.add_task("store_lamb_chicken_0")
-class StoreLambChickenTask(PrimitiveTask):
+class StoreLambChickenTask(PrimitiveSeqTask):
     """
     Task class for store_meat_fridge task.
 
@@ -85,8 +92,8 @@ class StoreLambChickenTask(PrimitiveTask):
     def __init__(self, task_name, robot, **kwargs):
         self.attach_objects = [
             "fridge",
-            "lamb_chop", "chicken_breast", "pork_loin", "bacon", "sausage", "fish",
-            "beet", "tofu", "potato", "dumpling", "carrot", "chili_pepper", "eggplant",
+            # "lamb_chop", "chicken_breast", "pork_loin", "bacon", "sausage", "fish",
+            # "beet", "tofu", "potato", "dumpling", "carrot", "chili_pepper", "eggplant",
         ]
         super().__init__(task_name, robot=robot, **kwargs)
 
@@ -95,8 +102,6 @@ class StoreLambChickenTask(PrimitiveTask):
         self.reset_entities_positions()
         self.attach_entities_to_arena()
 
-    def initialize_episode(self, physics, random_state):
-        super().initialize_episode(physics, random_state)
 
     def reset_entities_positions(self):
         """
@@ -126,7 +131,9 @@ class StoreLambChickenTask(PrimitiveTask):
         container_name = self.target_container[0] if isinstance(self.target_container, list) else self.target_container
         skill_sequence = []
         skill_sequence.extend([
+            partial(SkillLib.pick, body_name="small_fridge/handle"),
             partial(SkillLib.open_door, target_container_name=container_name),
+            partial(SkillLib.observe),
         ])
         for entity in target_entities:
             skill_sequence.extend([

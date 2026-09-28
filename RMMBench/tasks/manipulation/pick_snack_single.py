@@ -35,7 +35,7 @@ class PickChocolateConfigManager(BenchTaskConfigManager):
         """
         Override workspace parameters.
         island_counter_island_group + bottom direction,
-        following the parameters of the stovetop-type tasks in the workflow.
+        referencing the parameters of stovetop-type tasks in the workflow.
         """
         super().get_object_info(
             workregion_offset,
@@ -49,7 +49,7 @@ class PickChocolateConfigManager(BenchTaskConfigManager):
     ):
         """
         Override container placement parameters.
-        The plate is placed on the left side of the workspace, 0.3 m from the edge.
+        The plate is placed on the left side of the workspace, 0.3m from the edge.
         """
         if target_container is not None:
             if self.work_info and self.target_container:
@@ -70,7 +70,7 @@ class PickChocolateConfigManager(BenchTaskConfigManager):
     def get_condition_config(self, target_entity, target_container, **kwargs):
         """
         Success condition: the object is placed inside the plate container.
-        The contain condition is used to check whether target_entity is in target_container.
+        Uses the contain condition to check whether target_entity is in target_container.
         """
         conditions_config = dict(
             contain=dict(
@@ -82,7 +82,7 @@ class PickChocolateConfigManager(BenchTaskConfigManager):
 
     def get_instruction(self, target_entity, target_container, **kwargs):
         """
-        Generate the instruction text using natural language style, without exposing specific operation steps.
+        Generate the instruction text in natural language style, without exposing concrete operation steps.
         """
         instruction = [
             f"I want to eat the {self.extract_base_name(target_entity)}, can you put it on the plate for me?"
@@ -97,11 +97,16 @@ class PickChocolateTask(PrimitiveTask):
     Task class for pick_snack_single task.
 
     Task flow: pick chocolate → place on plate → end
-    Objects that need to be fixed: plate (the container is placed on the countertop and must be attached to the arena)
+    Objects that need to be fixed: plate (container placed on the countertop, must be attached to the arena)
     """
 
     def __init__(self, task_name, robot, **kwargs):
-        self.attach_objects = ["plate", "stove"]
+        self.attach_objects = ["plate",
+        #                       " chocolate_2",
+        #  "bar_10",
+        # "boxed_food_0",
+        # "chips_7",
+                               "stove"]
         super().__init__(task_name, robot=robot, **kwargs)
 
     def build_from_config(self, eval=False, **kwargs):
@@ -112,7 +117,7 @@ class PickChocolateTask(PrimitiveTask):
 
     def reset_entities_positions(self):
         """
-        Height adaptation: adjust the z coordinate according to each object's own height
+        Height adaptation: adjust the z coordinate based on each object's own height
         to avoid initial penetration/clipping.
         """
         if self.config_manager.all_entities is not None:

@@ -20,7 +20,7 @@ class PickNonAlcoholicDrinkConfigManager(BenchTaskConfigManager):
     - fixture_surface: island_counter_island_group
     - destination_position: bottom
     - robot: position [2.749967571243619, -3.650127391388798, 0.0], euler [0, 0, 1.57]
-    - inherited: BenchTaskConfigManager (target_entity is str, target_container is str)
+    - inherited: BenchTaskConfigManager (target_entity is a str, target_container is a str)
     """
 
     def __init__(self, task_name, num_objects=[2], **kwargs):
@@ -40,9 +40,7 @@ class PickNonAlcoholicDrinkConfigManager(BenchTaskConfigManager):
             grid_size=grid_size,
         )
 
-    def load_containers(
-        self, target_container, offset=0.25, y_set=0.05, direction="left"
-    ):
+    def load_containers(self, target_container, offset=0.25, y_set=0.05, direction="left"):
         if target_container is not None:
             if self.work_info and self.target_container:
                 container_info = self.get_container_info_from_workregion(
@@ -88,7 +86,7 @@ class PickNonAlcoholicDrinkTask(PrimitiveTask):
     def __init__(self, task_name, robot, **kwargs):
         self.attach_objects = [
             "tray",  # container
-            # "water_bottle", "beer", "wine", "boxed_drink", "alcohol", "cola", "pepsi", "lemonade",  # drinks
+            "water_bottle", "beer", "wine", "boxed_drink", "alcohol", "cola", "pepsi", "lemonade",  # beverage items
         ]
         super().__init__(task_name, robot=robot, **kwargs)
 

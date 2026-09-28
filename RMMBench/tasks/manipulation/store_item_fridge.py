@@ -3,7 +3,7 @@ from functools import partial
 
 import numpy as np
 
-from RMMBench.tasks.base_task import PrimitiveTask
+from RMMBench.tasks.base_task import PrimitiveSeqTask
 from RMMBench.tasks.config_manager import BenchTaskConfigManager
 from RMMBench.utils.register import register
 from RMMBench.utils.skill_lib import SkillLib
@@ -22,7 +22,7 @@ class StoreNonAlcoholicDrinkConfigManager(BenchTaskConfigManager):
     - fixture_surface: island_counter_island_group
     - destination_position: bottom
     - robot: position [2.749967571243619, -3.650127391388798, 0.0], euler [0, 0, 1.57]
-    - inherited: BenchTaskConfigManager (target_entity is str, target_container is str)
+    - Inheritance: BenchTaskConfigManager (target_entity is str, target_container is str)
     """
 
     def __init__(self, task_name, num_objects=[2], **kwargs):
@@ -46,10 +46,22 @@ class StoreNonAlcoholicDrinkConfigManager(BenchTaskConfigManager):
         super().load_containers(target_container,offset,y_set,direction,z_set,orient_offset)
 
     def get_condition_config(self, target_entity, target_container, **kwargs):
+        """
+        Success conditions: first open the fridge door, then place the target object into the fridge.
+        In BenchTaskConfigManager both target_entity / target_container are str.
+        Corresponding expert sequence: pick(fridge) → open_door(fridge) → pick(target) → place(fridge).
+        The small_fridge entity class has a built-in is_open(physics) check (door joint angle > 0.785 rad).
+        """
         conditions_config = dict(
-            contain=dict(
-                container=target_container,
-                entities=[target_entity],
+            asyn_sequence=dict(
+                condition_sets=[
+                    dict(is_open=dict(container=target_container)),
+                    dict(contain=dict(
+                        container=target_container,
+                        entities=[target_entity],
+                    )),
+                ],
+                ordered_indices=[0, 1],
             )
         )
         self.config["task"]["conditions"] = conditions_config
@@ -63,19 +75,19 @@ class StoreNonAlcoholicDrinkConfigManager(BenchTaskConfigManager):
 
 
 @register.add_task("store_non_alcoholic_drink")
-class StoreNonAlcoholicDrinkTask(PrimitiveTask):
+class StoreNonAlcoholicDrinkTask(PrimitiveSeqTask):
     """
     Task class for store_item_fridge task.
 
-    Task flow: pick → place (fridge) → end
+    Task flow: pick → place(fridge) → end
     Objects that need to be fixed: fridge
     """
 
     def __init__(self, task_name, robot, **kwargs):
         self.attach_objects = [
             "fridge",  # container
-            "water_bottle", "boxed_drink",  # target objects
-            "beer", "wine", "alcohol", "cola", "pepsi", "lemonade",  # distractors
+            # "water_bottle", "boxed_drink",  # target objects
+            # "beer", "wine", "alcohol", "cola", "pepsi", "lemonade",  # distractors
         ]
         super().__init__(task_name, robot=robot, **kwargs)
 
@@ -92,18 +104,37 @@ class StoreNonAlcoholicDrinkTask(PrimitiveTask):
                 if entity is None:
                     continue
                 height = entity.get_placement_height()
-                if "bottle" in k:
+                if "water_bottle_2" in k:
+                    height += 0.035
+                elif "bottle" in k:
                     height += 0.04
-                if height == 0:
+                elif "wine" in k:
+                    height -= 0.03
+                elif "beer" in k:
+                    height -= 0.03
+                elif "alcohol" in k:
+                    height += -0.02
+                elif "milk" in k:
+                    height += -0.01
+                elif "boxed" in k:
+                    height += -0.02
+                elif "pepsi" in k:
+                    height += -0.02
+                elif any(d in k for d in ["cola_1",  "lemonade_3"]):
+                    height += 0.03
+                elif height == 0:
                     height += 0.01
                 entity.init_pos[2] += height
 
     def get_expert_skill_sequence(self, physics):
         target_entity = self.config_manager.target_entity
         container_name = self.target_container
+        print(f"{container_name}/handle")
+
         skill_sequence = [
-            partial(SkillLib.pick, target_entity_name=container_name),
+            partial(SkillLib.pick, body_name=f"{container_name}/handle"),
             partial(SkillLib.open_door, target_container_name=container_name),
+            partial(SkillLib.observe),
             partial(SkillLib.pick, target_entity_name=target_entity),
             partial(SkillLib.place, target_container_name=container_name),
             partial(SkillLib.end),
@@ -157,12 +188,12 @@ class StoreNoSugarDrinkConfigManager(StoreNonAlcoholicDrinkConfigManager):
     - num_objects:    [4]
     """
 
-    def __init__(self, task_name, num_objects=[4], **kwargs):
+    def __init__(self, task_name, num_objects=[3], **kwargs):
         super().__init__(task_name, num_objects, **kwargs)
 
     def get_seen_task_config(self):
         self.seen_object = ["water_bottle_3"]
-        self.distractor = ["cola_1", "pepsi_3", "lemonade_3", "boxed_drink_0"]
+        self.distractor = ["cola_1", "lemonade_3",  "boxed_drink_0"]#
         self.seen_container = ["small_fridge"]
         self.robocasa_scene = "ONE_WALL_LARGE_4"
         return super().get_seen_task_config()

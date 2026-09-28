@@ -26,8 +26,8 @@ class PreparePorkTongsConfigManager(Multi_traget_container):
     def __init__(self, task_name, num_objects=[2, 2], **kwargs):
         super().__init__(task_name, num_objects, **kwargs)
         self.CONTAINER_CONFIG_TABLE = [
-            {"offset": 0.25, "y_set": 0.05, "direction": "left", "z_set": 0.01},
-            {"offset": 0.25, "y_set": 0.05, "direction": "right", "z_set": 0.01},
+            {"offset": 0.28, "y_set": 0.05, "direction": "left", "z_set": 0.01},
+            {"offset": 0.28, "y_set": 0.05, "direction": "right", "z_set": 0.01},
             {"offset": 0, "y_set": 0.1, "direction": "top", "z_set": 0.01},
         ]
 
@@ -82,8 +82,8 @@ class PreparePorkTongsTask(PrimitiveSeqTask):
     def __init__(self, task_name, robot, **kwargs):
         self.attach_objects = [
             "pan", "tray",  # fixed containers
-            "pork_loin", "tongs", "chicken_breast", "spatula", "pork_chop", "spoon",  # target objects
-            "ham", "scissors", "potato", "baking_sheet", "fork", "lamb_chop", "kettle", "ladle", "whisk",  # fixed distractors
+            # "pork_loin", "tongs", "chicken_breast", "spatula", "pork_chop", "spoon",  # target objects
+            # "ham", "scissors", "potato", "baking_sheet", "fork", "lamb_chop", "kettle", "ladle", "whisk",  # fixed distractors
         ]
         super().__init__(task_name, robot=robot, **kwargs)
 
@@ -137,12 +137,12 @@ class PreparePorkTongsTask(PrimitiveSeqTask):
 
 @register.add_config_manager("prepare_chicken_spatula_0")
 class PrepareChickenSpatulaConfigManager(PreparePorkTongsConfigManager):
-    def __init__(self, task_name, num_objects=[3, 2], **kwargs):
+    def __init__(self, task_name, num_objects=[2, 2], **kwargs):
         super().__init__(task_name, num_objects, **kwargs)
 
     def get_seen_task_config(self):
         self.seen_object = [["chicken_breast_10"], ["spatula_1"]]
-        self.distractor = ["potato_0", "baking_sheet_6", "fork_4"]
+        self.distractor = ["potato_0",  "fork_4"]
         self.seen_container = ["pan_1", "tray_1"]
         self.robocasa_scene = "ONE_WALL_LARGE_7"
         return super().get_seen_task_config()

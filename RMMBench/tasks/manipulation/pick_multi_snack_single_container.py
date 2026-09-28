@@ -20,15 +20,15 @@ class SelectBaggedSnacksConfigManager(Multi_traget_container):
     - fixture_surface: island_counter_island_group
     - destination_position: bottom
     - robot: position [2.749967571243619, -3.650127391388798, 0.0], euler [0, 0, 1.57]
-    - inherited: Multi_traget_container (both target_entity and target_container are lists)
+    - Inherits: Multi_traget_container (both target_entity and target_container are lists)
     """
 
     def __init__(self, task_name, num_objects=[2, 2], **kwargs):
         super().__init__(task_name, num_objects, **kwargs)
         self.CONTAINER_CONFIG_TABLE = [
-                    {"offset": 0.25, "y_set": 0.05, "direction": "left", "z_set": 0.01},  # config for the 1st container
-                    {"offset": 0.2, "y_set": 0.05, "direction": "right", "z_set": 0.01},  # config for the 2nd container (offset position)
-                    {"offset": 0, "y_set": 0.1, "direction": "top", "z_set": 0.01},  # config for the 3rd container (offset position)
+                    {"offset": 0.25, "y_set": 0.05, "direction": "left", "z_set": 0.01},  # config of the 1st container
+                    {"offset": 0.2, "y_set": 0.05, "direction": "right", "z_set": 0.01},  # config of the 2nd container (offset position)
+                    {"offset": 0, "y_set": 0.1, "direction": "top", "z_set": 0.01},  # config of the 3rd container (offset position)
                 ]
 
     def get_object_info(
@@ -48,7 +48,7 @@ class SelectBaggedSnacksConfigManager(Multi_traget_container):
     def get_condition_config(self, target_entity, target_container, **kwargs):
         """
         Success condition: all target objects are placed inside the container.
-        In Multi_traget_container, target_container is a list; take the first element as the detection container.
+        In Multi_traget_container, target_container is a list; take the first element as the checking container.
         target_entity is a list containing all target objects that need to be placed.
         """
         container = target_container[0] if isinstance(target_container, list) else target_container
@@ -62,7 +62,7 @@ class SelectBaggedSnacksConfigManager(Multi_traget_container):
 
     def get_instruction(self, target_entity, target_container, **kwargs):
         """
-        Generate the instruction text using natural language style, without exposing specific operation steps.
+        Generate the instruction text in natural language style, without exposing concrete operation steps.
         """
         instruction = [
             "I'd like to have all the bagged snacks, can you put them on the tray for me?"
@@ -94,7 +94,7 @@ class SelectBaggedSnacksTask(PrimitiveSeqTask):
 
     def reset_entities_positions(self):
         """
-        Height adaptation: adjust the z coordinate according to each object's own height
+        Height adaptation: adjust the z coordinate based on each object's own height
         to avoid initial penetration/clipping.
         """
         if self.config_manager.all_entities is not None:
@@ -110,8 +110,8 @@ class SelectBaggedSnacksTask(PrimitiveSeqTask):
 
     def get_expert_skill_sequence(self, physics):
         """
-        Expert skill sequence: multi-target pick → place → observe loop, followed by end.
-        target_entity is a list and target_container is also a list.
+        Expert skill sequence: multi-target pick → place → observe loop, ending with end.
+        target_entity is a list, and target_container is also a list.
         All target objects are placed into the same container.
         """
         target_entities = self.config_manager.target_entity
@@ -132,8 +132,8 @@ class SelectBaggedSnacksTask(PrimitiveSeqTask):
 class ClusterBaggedBarSnackConfigManager(SelectBaggedSnacksConfigManager):
     """
     Multi-target, multi-container clustering task, inherited from SelectBaggedSnacksConfigManager.
-    Differences from the parent class: seen_object becomes nested [[],[]], seen_container becomes two containers,
-    and the condition becomes an or-condition — the two groups of objects go into two trays (either assignment scheme is accepted).
+    Differences from the parent class: seen_object becomes nested [[],[]], seen_container becomes two,
+    and the condition becomes an or condition; the two groups of objects are placed into two trays respectively (one of the two assignment schemes is used).
     """
 
     def __init__(self, task_name, num_objects=[1], **kwargs):
@@ -169,7 +169,7 @@ class ClusterBaggedBarSnackConfigManager(SelectBaggedSnacksConfigManager):
 @register.add_task("cluster_bagged&bar_snack")
 class ClusterBaggedBarSnackTask(SelectBaggedSnacksTask):
     """
-    Multi-target, multi-container clustering task, inherited from SelectBaggedSnacksTask.
+    Multi-target multi-container clustering task, inherited from SelectBaggedSnacksTask.
     Only overrides get_expert_skill_sequence: iterate by class, placing each class of objects into its corresponding container.
     """
 

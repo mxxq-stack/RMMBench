@@ -76,7 +76,7 @@ class CookSteakConfigManager(Multi_traget_container):
                         ordered_indices=[0, 1]
                     )
                 ),
-                # The stovetop knob must be open (is_open locks in once satisfied, ANDed with the ordered condition)
+                # The stovetop knob must be turned on (is_open locks in once satisfied, ANDed with the ordered condition)
                 dict(
                     is_open=dict(
                         container="stove_0",
@@ -144,15 +144,11 @@ class CookSteakTask(PrimitiveSeqTask):
         target_entities = self.config_manager.target_entity
         container_name = self.target_container[0] if isinstance(self.target_container, list) else self.target_container
         skill_sequence = []
-        # for entity in target_entities:
-        #     skill_sequence.extend([
-        #         partial(SkillLib.pick, target_entity_name=entity),
-        #         partial(SkillLib.place, target_container_name=container_name),
-        #         partial(SkillLib.observe),
-        #     ])
         skill_sequence.extend([
             partial(SkillLib.pick, target_entity_name=target_entities[0]),
+
             partial(SkillLib.place, target_container_name=self.target_container[1]),
+
             partial(SkillLib.observe),
             partial(SkillLib.pick, body_name="stove_0/knob_front_right"),
             partial(SkillLib.rotate_knob),

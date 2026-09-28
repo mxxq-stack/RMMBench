@@ -24,7 +24,7 @@ class WashFruitFromShelfConfigManager(Multi_traget_container):
     - fixture_surface: island_island_group
     - destination_position: top
     - robot: position [3.050067173852504, -1.6998841861248737, 0.0], euler [0, 0, -1.57]
-    - inherited: Multi_traget_container (both target_entity and target_container are lists)
+    - Inherits: Multi_traget_container (both target_entity and target_container are lists)
     """
 
     def __init__(self, task_name, num_objects=[2, 2], **kwargs):
@@ -83,10 +83,10 @@ class WashFruitFromShelfConfigManager(Multi_traget_container):
 
     def get_condition_config(self, target_entity, target_container, **kwargs):
         """
-        Success condition: each fruit is first placed into the sink to be washed, then finally placed on the tray and at rest.
+        Success condition: each fruit is first placed into the sink for washing, and finally placed onto the tray and at rest.
         In Multi_traget_container, target_container is a list; take the first element as the final container (tray).
         target_entity is a list containing all target fruits that need to be washed.
-        Each fruit gets its own asyn_sequence: sink first, then tray; fruits do not interfere with each other.
+        Each fruit gets an independent asyn_sequence: sink first → then tray, with fruits not interfering with each other.
         """
         tray = target_container[0] if isinstance(target_container, list) else target_container
         sink = "sink_0"  # fixed sink name
@@ -106,7 +106,6 @@ class WashFruitFromShelfConfigManager(Multi_traget_container):
                 )
             )
 
-        # The faucet must be open (is_open locks in once satisfied, ANDed with each fruit's ordered condition)
         and_conditions.append(dict(is_open=dict(container=sink)))
 
         conditions_config = dict(and_conditions=and_conditions)
@@ -132,7 +131,7 @@ class WashFruitFromShelfTask(PrimitiveSeqTask):
     Task class for wash_fruit_shelf task.
 
     Task flow: pick from shelf → wash → place → end
-    Objects that need to be fixed: tray (the container is placed on the countertop and must be attached to the arena)
+    Objects that need to be fixed: tray (container placed on the countertop, must be attached to the arena)
     """
 
     def __init__(self, task_name, robot, **kwargs):
@@ -149,7 +148,7 @@ class WashFruitFromShelfTask(PrimitiveSeqTask):
 
     def reset_entities_positions(self):
         """
-        Height adaptation: adjust the z coordinate according to each object's own height
+        Height adaptation: adjust the z coordinate based on each object's own height
         to avoid initial penetration/clipping.
         """
         if self.config_manager.all_entities is not None:
@@ -168,15 +167,13 @@ class WashFruitFromShelfTask(PrimitiveSeqTask):
 
     def get_expert_skill_sequence(self, physics):
         """
-        Expert skill sequence: multi-target pick → wash → place → observe loop, followed by end.
-        target_entity is a list and target_container is also a list.
+        Expert skill sequence: multi-target pick → wash → place → observe loop, ending with end.
+        target_entity is a list, and target_container is also a list.
         All target objects are placed into the same container.
         """
         target_entities = self.config_manager.target_entity
         container_name = self.target_container[0] if isinstance(self.target_container, list) else self.target_container
-        sink_pos = [3.1633935583239987,
-                -2.074996605491736-0.1,
-                0.7229166666666667+0.1]
+
         skill_sequence = []
         for entity in target_entities:
             skill_sequence.extend([

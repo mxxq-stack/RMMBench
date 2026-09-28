@@ -1,6 +1,6 @@
 from functools import partial
 
-from RMMBench.tasks.base_task import PrimitiveTask
+from RMMBench.tasks.base_task import PrimitiveSeqTask
 from RMMBench.tasks.config_manager import BenchTaskConfigManager
 from RMMBench.utils.register import register
 from RMMBench.utils.skill_lib import SkillLib
@@ -44,13 +44,12 @@ class UncoverObjectConfigManager(BenchTaskConfigManager):
                 o = component["orientation"]
                 component["orientation"] = [o[0], o[1] + 3.14, o[2]]
 
-
-
     def get_condition_config(self, target_entity, target_container, **kwargs):
-        conditions_config = dict(
-            contain=dict(container=target_container, entities=[target_entity])
-        )
-        self.config["task"]["conditions"] = conditions_config
+        and_conditions = [
+            dict(contain=dict(container=target_container, entities=["pan_0"])),
+            dict(contain=dict(container="sink_0", entities=[target_entity])),
+        ]
+        self.config["task"]["conditions"] = dict(and_conditions=and_conditions)
 
     def get_instruction(self, target_entity, target_container, **kwargs):
         instruction = [f"Help me wash the {self.extract_base_name(target_entity)}."]
@@ -59,7 +58,7 @@ class UncoverObjectConfigManager(BenchTaskConfigManager):
 
 
 @register.add_task("uncover_fruit")
-class UncoverObjectTask(PrimitiveTask):
+class UncoverObjectTask(PrimitiveSeqTask):
     def __init__(self, task_name, robot, **kwargs):
         self.attach_objects = ["tray", "peach","sink"]
         super().__init__(task_name, robot=robot, **kwargs)
@@ -81,30 +80,19 @@ class UncoverObjectTask(PrimitiveTask):
                 height = entity.get_placement_height()
                 entity.init_pos[2] += height
 
-    def attach_entities_to_arena(self):
-        for key, entity in self.entities.items():
-            if any(obj in key for obj in self.attach_objects):
-                entity.detach()
-                self._arena.attach(entity)
 
     def get_expert_skill_sequence(self, physics):
         target_entity = self.config_manager.target_entity
         mid_container_name = list(self.config_manager.mid_container_mapping.keys())[0]
         init_ee_pos, init_ee_quat = list(self.robot.get_end_effector_pos(physics)), self.robot.get_end_effector_quat(
             physics)
-        sink_placement = [2.74, -2.2, 0.94]
         skill_sequence = [
             partial(SkillLib.pick, target_entity_name=mid_container_name),
+
             partial(SkillLib.place, target_container_name=self.target_container),
             partial(SkillLib.observe),
             partial(SkillLib.pick, target_entity_name=target_entity),
-            partial(SkillLib.place, target_pos=sink_placement),
+            partial(SkillLib.place, target_container_name="sink_0"),
             partial(SkillLib.end),
         ]
-        # skill_sequence = [
-        #     partial(SkillLib.pick, target_entity_name=mid_container_name),
-        #     partial(SkillLib.place, target_pos=sink_placement),
-        #     partial(SkillLib.observe),
-        #     partial(SkillLib.end),
-        # ]
         return skill_sequence

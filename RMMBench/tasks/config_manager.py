@@ -97,8 +97,11 @@ class BenchTaskConfigManager():
             self.unseen_object = self.distractor
 
         # Parse mid_container: [{"pan_0": ["apple"]}] → {"pan_0": ["apple"]}
-        # self.mid_container_mapping = {}
-        # self.container_mapping = {}
+        # Initialize to empty dicts by default: mid_mapping() or _process_single_layout will
+        # rebuild and overwrite them; prevents AttributeError in get_object_info / load_objects /
+        # load_containers for subclasses that never call mid_mapping() (e.g. SelectSnacksToTrayConfigManager).
+        self.mid_container_mapping = {}
+        self.container_mapping = {}
         #
         # if self.mid_container:
         #     seen_flat = set(flatten_list(self.seen_container)) if self.seen_container is not None else set()
@@ -1119,12 +1122,20 @@ class CompositeNavigationConfigManager(NavigationConfigManager):
         self.split_ratio = self.merged_split_ratio[idx]
 
         # Rebuild mid_container_mapping for this layout
+        # Merge logic consistent with BenchTaskConfigManager.mid_mapping:
+        # parents appearing in the current layout's seen_container go into container_mapping
+        # (loaded by load_containers as containers with children attached), avoiding the same
+        # entity being loaded twice; only parents not in seen_container go into
+        # mid_container_mapping (placed on grid points).
         self.mid_container_mapping = {}
+        self.container_mapping = {}
+        seen_flat = set(self.merged_seen_container[idx] or [])
         if mid_container:
             for item in mid_container:
                 if isinstance(item, dict):
                     for parent, children in item.items():
-                        self.mid_container_mapping[parent] = children
+                        target_map = self.container_mapping if parent in seen_flat else self.mid_container_mapping
+                        target_map[parent] = children
 
         # Get current layout objects
         current_seen = self.merged_seen_object[idx]
@@ -1181,7 +1192,10 @@ class CompositeNavigationConfigManager(NavigationConfigManager):
             all_entities = flatten_list(self.merged_seen_object[idx]) + flatten_list(self.merged_distractor[idx])
             mid_children_count = sum(len(children) for children in self.mid_container_mapping.values())
             mid_parents_count = len(self.mid_container_mapping)
-            n_samples = len(all_entities) + mid_parents_count - mid_children_count
+            # container_mapping children are loaded with their container as subentities and
+            # do not occupy grid sample points (consistent with the base class get_object_info)
+            container_mid_children_count = sum(len(children) for children in self.container_mapping.values()) if hasattr(self, "container_mapping") else 0
+            n_samples = len(all_entities) + mid_parents_count - mid_children_count - container_mid_children_count
             self.sampled_points[idx] = grid_sample(
                 workregion,
                 grid_size=grid_size,
@@ -1212,6 +1226,10 @@ class CompositeNavigationConfigManager(NavigationConfigManager):
                 # Mid_container mode: separate regular objects from mid_container children
                 mid_children = set()
                 for children in self.mid_container_mapping.values():
+                    mid_children.update(children)
+                # container_mapping children are loaded with their container and likewise
+                # do not occupy grid points (consistent with the base class load_objects)
+                for children in (self.container_mapping or {}).values():
                     mid_children.update(children)
                 regular_objects = [obj for obj in all_objects if obj not in mid_children]
                 mid_parents = list(self.mid_container_mapping.keys())
@@ -1317,10 +1335,33 @@ class CompositeNavigationConfigManager(NavigationConfigManager):
                         position=container_info["position"],
                         orientation=container_info["orientation"]
                     )
+                    # If the container is in container_mapping, attach its children as subentities
+                    # (consistent with the base class load_containers)
+                    for parent, children in self.container_mapping.items():
+                        if parent == container:
+                            container_config["subentities"] = []
+                            for j, child in enumerate(children):
+                                child_config = self.get_entity_config(
+                                    child,
+                                    position=[j * 0.1 - 0.05 * (len(children) - 1), 0, 0],
+                                    orientation=[0, 0, 0]
+                                )
+                                container_config["subentities"].append(child_config)
                     self.config["task"]["components"].append(container_config)
                 else:
                     # Generic fallback placement
                     container_config = self.get_entity_config(container)
+                    # The fallback branch also attaches container_mapping children
+                    for parent, children in self.container_mapping.items():
+                        if parent == container:
+                            container_config["subentities"] = []
+                            for j, child in enumerate(children):
+                                child_config = self.get_entity_config(
+                                    child,
+                                    position=[j * 0.1 - 0.05 * (len(children) - 1), 0, 0],
+                                    orientation=[0, 0, 0]
+                                )
+                                container_config["subentities"].append(child_config)
                     self.config["task"]["components"].append(container_config)
 
 

@@ -124,7 +124,22 @@ class Microwave(ContainerWithDoor):
         and the door is considered open when the angle exceeds the threshold (default 0.2 rad ≈ 11.5°).
         """
         return abs(self.get_door_angle(physics)) > threshold
-    
+
+    # ── body_name identification (referring to Sink) ───────────────────────────────
+    def get_grasped_keypoints(self, physics, body_name=None):
+        if body_name is not None and body_name != "handle":
+            return []
+
+        body = self._mjcf_model.find("body", "handle")
+        if body is None:
+            return []
+
+        grasp_sites = [s for s in body.find_all("site") if physics.bind(s).group == 4]
+        if not grasp_sites:
+            return []
+
+        return [physics.bind(s).xpos for s in grasp_sites]
+
     @property
     def start_button(self):
         return self.mjcf_model.worldbody.find("geom", "start_button")

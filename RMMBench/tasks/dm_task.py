@@ -471,19 +471,7 @@ class LM4ManipBaseTask(composer.Task):
                 # Old approach: detach + attach (weld to world), which freezes knob joints
                 entity.detach()
                 self._arena.attach(entity)
-                # self._fix_entity_with_weld(entity)
 
-    # def attach_entities_to_arena(self):
-    #     for key, entity in self.entities.items():
-    #         if any(obj in key for obj in self.attach_objects):
-    #             if self._has_child_joints(entity):
-    #                 print("entity:", entity)
-    #                 # Has internal joints (e.g. stove's knob) -> keep the freejoint, fix with an equality constraint
-    #                 self._fix_entity_with_equality(entity)
-    #             else:
-    #                 # No internal joints (e.g. pan, tray) -> original approach, detach + attach to fix completely
-    #                 entity.detach()
-    #                 self._arena.attach(entity)
 
     def _has_child_joints(self, entity):
         """Check whether the entity has internal joints other than a freejoint (e.g. hinge, slide)."""
@@ -641,14 +629,11 @@ class LM4ManipBaseTask(composer.Task):
     
     def attach_entity(self, entity):
         self._arena.attach(entity)
-        # self.entities[entity.mjcf_model.model] = entity
 
     
     def _build_observables(self):
         self.robot.observables.joint_positions.enabled = True
         self.robot.observables.joint_velocities.enabled = True
-        # for i in range(len(self.robot.observables.gripper_state)):
-        #     self.robot.observables.gripper_state[i].enabled = True
         self._task_observables["robot"] = self.robot.observables
         for obs in self._task_observables.values():
             obs.enabled = True
@@ -678,18 +663,11 @@ class LM4ManipBaseTask(composer.Task):
         if self.navigation_condition is not None:
             self.robot_end_pos = self.robot.get_link_base_info(physics)["position"]
             self.navig_condition = self.navigation_condition.is_met(physics)
-            # print("----- self.navig_condition:", self.navig_condition)
         else:
             self.navig_condition = True
         if hasattr(self, "conditions"):
-
             terminal = self.conditions.is_met(physics) and self.skill_end
-            # print("dm_task----c_met:",self.conditions.is_met(physics))
-            # print("dm_task----end:",self.skill_end)
-            # print("dm_task----terminal:", terminal)
             self.task_success = terminal
-            # print("dm_task-------task_success:",self.task_success)
-
         else:
             terminal = False
         return terminal

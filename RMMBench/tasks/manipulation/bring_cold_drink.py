@@ -1,7 +1,7 @@
 import random
 from functools import partial
 
-from RMMBench.tasks.base_task import PrimitiveTask
+from RMMBench.tasks.base_task import PrimitiveSeqTask
 from RMMBench.tasks.config_manager import Multi_traget_container
 from RMMBench.utils.register import register
 from RMMBench.utils.skill_lib import SkillLib
@@ -48,15 +48,28 @@ class BringColdWaterConfigManager(Multi_traget_container):
 
     def get_condition_config(self, target_entity, target_container, **kwargs):
         """
-        Success condition: all target objects are placed inside the container and at rest.
-        In Multi_traget_container, target_container is a list; take the first element as the detection container.
-        target_entity is a list containing all target objects that need to be placed.
+        Success condition: first open the fridge door, then place all target objects on the tray and keep them at rest.
+        asyn_sequence + ordered_indices=[0, 1] enforces the stage order:
+            Stage 0: is_open(small_fridge) —— the fridge door is opened
+            Stage 1: contain([water_bottle_0], tray) —— the target objects are placed on the tray
+        Stage 1 stays locked before Stage 0 completes; it is neither scored nor marked as done.
         """
         container = target_container[0] if isinstance(target_container, list) else target_container
+        mid_container = list(self.mid_container[0].keys())[0]
         conditions_config = dict(
-            contain=dict(
-                container=container,
-                entities=target_entity,
+            asyn_sequence=dict(
+                condition_sets=[
+                    dict(
+                        is_open=dict(container=mid_container),
+                    ),
+                    dict(
+                        contain=dict(
+                            container=container,
+                            entities=target_entity,
+                        ),
+                    ),
+                ],
+                ordered_indices=[0, 1],
             )
         )
         self.config["task"]["conditions"] = conditions_config
@@ -75,7 +88,7 @@ class BringColdWaterConfigManager(Multi_traget_container):
 
 
 @register.add_task("bring_cold_water")
-class BringColdWaterTask(PrimitiveTask):
+class BringColdWaterTask(PrimitiveSeqTask):
     """
     Task class for bring_cold_drink task.
 
@@ -86,6 +99,9 @@ class BringColdWaterTask(PrimitiveTask):
     def __init__(self, task_name, robot, **kwargs):
         self.attach_objects = [
             "fridge", "tray",
+            # "water_bottle_0","water_bottle_1",
+            #         "bottled_cola_0",      "water_bottle_0",
+            #                 "bottled_cola_0"
 
         ]
         super().__init__(task_name, robot=robot, **kwargs)
@@ -114,7 +130,7 @@ class BringColdWaterTask(PrimitiveTask):
                     height+=0.06
 
                 if "water_bottle_1" in k:
-                    height+=0.02
+                    height+=0.04
                 if "cola_1" in k:
                     height+=0.05
                 if "pepsi" in k:
@@ -224,13 +240,13 @@ class BringColdBoxedDrinkTask(BringColdWaterTask):
         super().__init__(task_name, robot=robot, **kwargs)
 
 
-# ==================== BV02: drink-choice tasks ====================
+# ==================== BV02: drink choice tasks ====================
 
 @register.add_config_manager("bring_non_alcoholic_drink")
 class BringNonAlcoholicDrinkConfigManager(BringColdWaterConfigManager):
     """
-    BV02-1: fetch a non-alcoholic drink from the fridge.
-    Inherited from BringColdWaterConfigManager, num_objects stays [2, 1].
+    BV02-1: Fetch a non-alcoholic drink from the fridge.
+    Inherits BringColdWaterConfigManager, num_objects stays [2, 1].
     - seen_object:    ["water_bottle_2"]
     - distractor:     ["beer_5", "wine_2"]
     - mid_container:  [{"small_fridge": ["water_bottle_2", "beer_5"]}]
@@ -271,8 +287,8 @@ class BringNonAlcoholicDrinkTask(BringColdWaterTask):
 @register.add_config_manager("bring_child_drink")
 class BringChildDrinkConfigManager(BringColdWaterConfigManager):
     """
-    BV02-2: fetch a child-appropriate drink from the fridge.
-    Inherited from BringColdWaterConfigManager, num_objects stays [2, 1].
+    BV02-2: Fetch a drink suitable for a child from the fridge.
+    Inherits BringColdWaterConfigManager, num_objects stays [2, 1].
     - seen_object:    ["boxed_drink_2"]
     - distractor:     ["beer_11", "wine_9"]
     - mid_container:  [{"small_fridge": ["boxed_drink_2", "beer_11"]}]
@@ -313,8 +329,8 @@ class BringChildDrinkTask(BringColdWaterTask):
 @register.add_config_manager("bring_no_sugar_drink")
 class BringNoSugarDrinkConfigManager(BringColdWaterConfigManager):
     """
-    BV02-3: fetch a sugar-free drink from the fridge.
-    Inherited from BringColdWaterConfigManager, num_objects stays [2, 1].
+    BV02-3: Fetch a sugar-free drink from the fridge.
+    Inherits BringColdWaterConfigManager, num_objects stays [2, 1].
     - seen_object:    ["water_bottle_3"]
     - distractor:     ["cola_1", "pepsi_3"]
     - mid_container:  [{"small_fridge": ["water_bottle_3", "cola_1"]}]

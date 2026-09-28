@@ -3,7 +3,7 @@ from functools import partial
 
 import numpy as np
 
-from RMMBench.tasks.base_task import PrimitiveTask
+from RMMBench.tasks.base_task import PrimitiveSeqTask
 from RMMBench.tasks.config_manager import BenchTaskConfigManager
 from RMMBench.utils.register import register
 from RMMBench.utils.skill_lib import SkillLib
@@ -12,21 +12,19 @@ from RMMBench.utils.skill_lib import SkillLib
 @register.add_config_manager("select_same_cake")
 class SelectSameCakeConfigManager(BenchTaskConfigManager):
     """
-    Same-kind selection task: a reference object (cake_9, placed inside the
-    cabinet via the mid_container mapping) is already stored in the cabinet
-    counter_0, while the tabletop holds a same-kind target (cake_0) and
-    different-kind distractors (scone_0, jello_cup_0). The robot must select
-    the object of the same kind and put it into the cabinet.
+    Same-category selection task: a reference object (cake_9, placed inside the cabinet via the
+    mid_container mapping) is already stored in the cabinet counter_0; on the countertop there is
+    a same-category target (cake_0) and different-category distractors (scone_0, jello_cup_0).
+    The robot needs to pick the same-category object and put it into the cabinet.
 
     Config source: task_config.json["select_same_class_cabinet"] (class 1)
     - seen_object:    ["cake_0"], sample 1 as target_entity
-    - distractor:     ["cake_9", "scone_0", "jello_cup_0"], num_objects=[2] samples 2 onto the tabletop
+    - distractor:     ["cake_9", "scone_0", "jello_cup_0"], num_objects=[2] samples 2 onto the countertop
     - mid_container:  [{"counter_0": ["cake_9"]}], counter_0 is in seen_container,
-                      so it goes through container_mapping and cake_9 is placed inside
-                      the cabinet as a subentity of the cabinet body
+                      so it goes through container_mapping and cake_9 is placed inside the cabinet as a subentity
     - seen_container: ["counter_0"]
     - robocasa_scene: ONE_WALL_LARGE_1
-    - Inherits: BenchTaskConfigManager (both target_entity / target_container are str)
+    - Inheritance: BenchTaskConfigManager (both target_entity / target_container are str)
     """
 
     def __init__(self, task_name, num_objects=[2], **kwargs):
@@ -40,9 +38,9 @@ class SelectSameCakeConfigManager(BenchTaskConfigManager):
     def load_containers(self, target_container, offset=0.4, y_set=0.5,
                         direction="left", z_set=0.1, orient_offset=[0, 0, 0]):
         """
-        Override the container placement parameters.
+        Overrides the container placement parameters.
         The counter_0 cabinet placement parameters (offset/z_set/orient_offset) follow test_1.py;
-        also keeps the parent class load_containers handling of container_mapping subentities,
+        and the subentities handling of container_mapping in the parent class load_containers is kept,
         so that the reference object (cake_9) is placed inside the cabinet as a subentity.
         """
         if target_container is not None:
@@ -62,7 +60,7 @@ class SelectSameCakeConfigManager(BenchTaskConfigManager):
                               container_info["position"][2]],
                     orientation=np.array(container_info["orientation"]) + orient_offset,
                 )
-                # Children of container_mapping (the in-cabinet reference object) are placed into the cabinet body as subentities
+                # The children of container_mapping (the in-cabinet reference object) are placed into the cabinet body as subentities
                 for parent, children in self.container_mapping.items():
                     if parent == target_container:
                         container_config["subentities"] = []
@@ -80,14 +78,21 @@ class SelectSameCakeConfigManager(BenchTaskConfigManager):
 
     def get_condition_config(self, target_entity, target_container, **kwargs):
         """
-        Success condition: the selected same-kind object is placed into the cabinet counter_0 and stays stationary.
-        target_entity is a str, so it must be wrapped in a list.
+        Success conditions (ordered constraint):
+        Stage 0: the cabinet counter_0 is pulled open (is_open, locked in permanently once satisfied; closing the door afterwards does not revert it)
+        Stage 1: the selected same-category object is placed inside the cabinet and at rest (contain_v); the check is only unlocked after is_open is satisfied
+        Both target_entity / target_container are str.
         """
         conditions_config = dict(
-            contain_v=dict(
-                container=target_container,
-                entities=[target_entity],
-                vel_th=0.01,
+            asyn_sequence=dict(
+                condition_sets=[
+                    dict(is_open=dict(container=target_container)),
+                    dict(contain=dict(
+                        container=target_container,
+                        entities=[target_entity],
+                    )),
+                ],
+                ordered_indices=[0, 1],
             )
         )
         self.config["task"]["conditions"] = conditions_config
@@ -100,13 +105,11 @@ class SelectSameCakeConfigManager(BenchTaskConfigManager):
 
 
 @register.add_task("select_same_cake")
-class SelectSameCakeTask(PrimitiveTask):
+class SelectSameCakeTask(PrimitiveSeqTask):
     """
-    Task flow: pick(cake_0) → place(counter_0) → end
-    Fixed entities needed: counter (the cabinet body is a component and must be attached to the arena)
-    For cabinet door interaction, insert before the skill sequence:
-        partial(SkillLib.pick, body_name="counter_0/door_handle_main"),
-        partial(SkillLib.pull),
+    Task flow: open the cabinet door (pull) → pick(cake_0) → place(counter_0) → close the cabinet door (push) → end
+    The success condition is asyn_sequence (is_open → contain_v), hence it inherits PrimitiveSeqTask.
+    Objects that need to be fixed: counter (the cabinet body is a component and must be attached to the arena)
     """
 
     def __init__(self, task_name, robot, **kwargs):
@@ -114,7 +117,7 @@ class SelectSameCakeTask(PrimitiveTask):
             "counter",
             # "cake",  # container
             #  "banana",  # target object
-            # "scone", "cherry", "bagel", "bar_soap",  # distractors and the in-cabinet reference object
+            # "scone", "cherry", "bagel", "bar_soap",  # distractors and in-cabinet reference object
         ]
         super().__init__(task_name, robot=robot, **kwargs)
 
@@ -124,7 +127,7 @@ class SelectSameCakeTask(PrimitiveTask):
         self.attach_entities_to_arena()
 
     def reset_entities_positions(self):
-        """Height adaptation: adjust the z coordinate by each object's own height to avoid initial interpenetration."""
+        """Height adaptation: adjust the z coordinate according to each object's own height to avoid initial interpenetration."""
         if self.config_manager.all_entities is not None:
             entities = self.config_manager.all_entities
             for k in entities:
@@ -153,9 +156,10 @@ class SelectSameCakeTask(PrimitiveTask):
         skill_sequence = [
             partial(SkillLib.pick, body_name="counter_0/door_handle_main"),
             partial(SkillLib.pull),
-
+            partial(SkillLib.observe),
             partial(SkillLib.pick, target_entity_name=target_entity),
             partial(SkillLib.place, target_container_name=self.target_container),
+            partial(SkillLib.observe),
             partial(SkillLib.pick, body_name="counter_0/door_handle_main"),
             partial(SkillLib.push),
             partial(SkillLib.end),
@@ -163,14 +167,14 @@ class SelectSameCakeTask(PrimitiveTask):
         return skill_sequence
 
 
-# ---------------------------- Class-2 tasks (inherit from class 1, only swap the object pools) ----------------------------
+# ---------------------------- Class 2 task (inherits class 1, only swaps the object pool) ----------------------------
 
 @register.add_config_manager("select_same_banana")
 class SelectSameBananaConfigManager(SelectSameCakeConfigManager):
     """
-    Class 2: swap the in-cabinet reference object to cherry_1, the same-kind tabletop
-    target to banana_21, and the distractors to bagel_3, bar_soap_2.
-    All other logic is fully reused from class 1.
+    Class 2: the in-cabinet reference object is replaced with cherry_1, the same-category target
+    on the countertop is replaced with banana_21, and the distractors are replaced with bagel_3
+    and bar_soap_2. All other logic is fully reused from class 1.
     """
 
     def get_seen_task_config(self):
@@ -183,9 +187,9 @@ class SelectSameBananaConfigManager(SelectSameCakeConfigManager):
     def load_containers(self, target_container, offset=0.4, y_set=0.5,
                         direction="left", z_set=0.1, orient_offset=[0, 0, 0]):
         """
-        Override the container placement parameters.
+        Overrides the container placement parameters.
         The counter_0 cabinet placement parameters (offset/z_set/orient_offset) follow test_1.py;
-        also keeps the parent class load_containers handling of container_mapping subentities,
+        and the subentities handling of container_mapping in the parent class load_containers is kept,
         so that the reference object (cake_9) is placed inside the cabinet as a subentity.
         """
         if target_container is not None:
@@ -205,7 +209,7 @@ class SelectSameBananaConfigManager(SelectSameCakeConfigManager):
                               container_info["position"][2]],
                     orientation=np.array(container_info["orientation"]) + orient_offset,
                 )
-                # Children of container_mapping (the in-cabinet reference object) are placed into the cabinet body as subentities
+                # The children of container_mapping (the in-cabinet reference object) are placed into the cabinet body as subentities
                 for parent, children in self.container_mapping.items():
                     if parent == target_container:
                         container_config["subentities"] = []
@@ -223,7 +227,7 @@ class SelectSameBananaConfigManager(SelectSameCakeConfigManager):
 
 @register.add_task("select_same_banana")
 class SelectSameBananaTask(SelectSameCakeTask):
-    """Fully reuses the class-1 Task logic."""
+    """Fully reuses the Task logic of class 1."""
 
     def __init__(self, task_name, robot, **kwargs):
         super().__init__(task_name, robot=robot, **kwargs)

@@ -47,7 +47,7 @@ def save_vlm_input_image(img, save_path, step_num):
 class VLAMessageHandler:
     def __init__(self, env, history_maxlen=8, img_size=(480, 480), vlm_url=None, api_key=None,
                  vlm_backend="gemini", prompt_format="openai", task_category="manipulation",
-                 collision_feedback_open=False):
+                 collision_feedback_open=False, include_reasoning_in_history=True):
         """
         Initialize the robot instruction handler
         :param history_maxlen: maximum length of the history queue
@@ -56,7 +56,7 @@ class VLAMessageHandler:
         :param api_key: VLM service authentication key (e.g. a DeepSeek API key; falls back to environment variables if not provided)
         :param vlm_backend: backend type name, for identification only (e.g. directory naming), such as "gemini", "seed", etc.
         :param prompt_format: prompt format, "openai" or "prompt_image_map"
-        :param task_category: task category used to select different prompts; one of "manipulation", "navigation", "composite_navigation"
+        :param task_category: task category used to select different prompts; one of "manipulation", "composite_navigation"
         """
         assert vlm_url is not None
         self.vlm_url = vlm_url
@@ -66,13 +66,10 @@ class VLAMessageHandler:
         self.collision_feedback_open = collision_feedback_open
 
         self.open_top_down_cam = False
-        self.include_reasoning_in_history = True  # whether to include reasoning in history steps
+        self.include_reasoning_in_history = include_reasoning_in_history  # whether to include reasoning in history steps
 
         self.history_maxlen = history_maxlen - 1
         self.grasp_history = dict()
-        # Record pick failure state (no point cloud)
-        self.last_pick_no_cloud = False  # True means the previous pick failed due to no point cloud
-        self.last_pick_failed_target = None  # record the failed target name
 
         # [RECALL] Stores keyframe info for each recalled history step
         # Structure: {"step_0": {"keyframe_indices": [...], "reasoning": "...",
@@ -118,7 +115,6 @@ class VLAMessageHandler:
 
         self.prompt_templates = {
             'manipulation': '',
-            'navigation': '',
             'composite_navigation': ''
         }
 
@@ -130,15 +126,7 @@ class VLAMessageHandler:
         else:
             print(f"Warning: manipulation_prompt.txt not found at {manipulation_path}")
 
-        # Load navigation prompt
-        navigation_path = os.path.join(prompt_dir, "navigation_prompt.txt")
-        if os.path.exists(navigation_path):
-            with open(navigation_path, 'r', encoding='utf-8') as f:
-                self.prompt_templates['navigation'] = f.read()
-        else:
-            print(f"Warning: navigation_prompt.txt not found at {navigation_path}")
-
-        # composite_navigation temporarily uses the navigation template
+        # Load composite navigation prompt
         # composite_navigation_prompt_no_bev
         if self.open_top_down_cam is False:
             composite_navigation = os.path.join(prompt_dir, "composite_navigation_prompt_no_bev.txt")
@@ -462,16 +450,14 @@ class VLAMessageHandler:
 
     def build_prompt_components(self, n, img, instruction, action=None, vlm_response=None):
         """
-        Build the refactored standardized prompt components, supporting navigation, manipulation and composite_navigation branches
+        Build the refactored standardized prompt components, supporting the manipulation and composite_navigation branches
         Returns: (system_prompt, images, all_user_contents)
         """
-        # 1. Encode and store the current round's images (head_joint)
+        # 1. Encode and store the current round's images (only the cameras actually used in prompts:
+        # cam_top for composite navigation with top-down cam, cam_head/cam_wrist for all tasks)
         cam_img = {
-            "cam_right": self._encode_b64(img[0]),
-            "cam_left": self._encode_b64(img[1]),
             "cam_top": self._encode_b64(img[2]),
             "cam_wrist": self._encode_b64(img[3]),
-            "cam_opposite": self._encode_b64(img[4]),
             "cam_head": self._encode_b64(img[5]),
         }
         self.img_list.append(cam_img)
@@ -480,7 +466,6 @@ class VLAMessageHandler:
         # Get the current round's state
         current_bbox = getattr(self, 'bbox', None)
         current_target_object = getattr(self, "target_object", None)
-        current_pick_no_cloud = getattr(self, 'last_pick_no_cloud', False)
         current_reasoning = getattr(self, 'reasoning', False)
 
         # Compute in real time whether the current step is "attempting manipulation skills before navigation completes"
@@ -523,7 +508,6 @@ class VLAMessageHandler:
             "img_idx": current_img_idx,
             "target": current_target_object,
             "reasoning": current_reasoning,
-            "is_pick_no_cloud": current_pick_no_cloud,
             "is_premature_manipulation": False,  # the current step has not executed an action yet, initialize to False
             "movedistance": self.movedistance,  # record this step's movedistance to avoid being overwritten globally later
             "target_out_of_reach": getattr(self, "target_out_of_reach", False),  # snapshot the state at this moment to avoid the global value polluting historical step prompts
@@ -541,30 +525,22 @@ class VLAMessageHandler:
             return self._build_composite_navigation_prompt(n, cam_img, system_prompt)
 
         # =========================================================
-        # 4. Original logic: initial round (n == 0) of plain navigation or manipulation tasks
+        # 4. Original logic: initial round (n == 0) of manipulation tasks
         # =========================================================
         if n == 0:
-            if self.task_category == "navigation":
-                user_text = "These are your initial observation. Please analyze the scene and select a navigation action.\n"
-                user_text += "1. TOP-DOWN CAMERA:<image_1>\n2. HEAD CAMERA:<image_2>\n3. WRIST CAMERA:<image_3>\n"
-                all_images = [
-                    {"id": "<image_1>", "data": f"data:image/jpeg;base64,{cam_img['cam_top']}"},
-                    {"id": "<image_2>", "data": f"data:image/jpeg;base64,{cam_img['cam_head']}"},
-                    {"id": "<image_3>", "data": f"data:image/jpeg;base64,{cam_img['cam_wrist']}"},
-                ]
-            else:  # manipulation initial round (usually uses 2 images)
-                user_text = "These are your initial observation. Please analyze the scene and select a manipulation action.\n"
-                user_text += "1. HEAD CAMERA:<image_1>\n2. WRIST CAMERA:<image_2>\n"
-                all_images = [
-                    {"id": "<image_1>", "data": f"data:image/jpeg;base64,{cam_img['cam_head']}"},
-                    {"id": "<image_2>", "data": f"data:image/jpeg;base64,{cam_img['cam_wrist']}"},
-                ]
+            # manipulation initial round (usually uses 2 images)
+            user_text = "These are your initial observation. Please analyze the scene and select a manipulation action.\n"
+            user_text += "1. HEAD CAMERA:<image_1>\n2. WRIST CAMERA:<image_2>\n"
+            all_images = [
+                {"id": "<image_1>", "data": f"data:image/jpeg;base64,{cam_img['cam_head']}"},
+                {"id": "<image_2>", "data": f"data:image/jpeg;base64,{cam_img['cam_wrist']}"},
+            ]
 
             all_user_contents = self._build_user_contents(user_text, all_images)
             return system_prompt, all_images, all_user_contents
 
         # =========================================================
-        # 5. Original logic: subsequent rounds (n > 0) of plain navigation or manipulation tasks
+        # 5. Original logic: subsequent rounds (n > 0) of manipulation tasks
         # =========================================================
         all_images = []
         img_id = 1
@@ -573,8 +549,6 @@ class VLAMessageHandler:
         history_steps_to_process = self.history_steps[:-1]
         total_history_count = len(history_steps_to_process)
 
-        use_3_cams = self.task_category == "navigation"
-
         # Iterate over all history steps
         for idx, step in enumerate(history_steps_to_process):
             step_num = step["step_idx"]
@@ -582,21 +556,8 @@ class VLAMessageHandler:
             box = step["bbox"]
             img_idx = step["img_idx"]
             target = step["target"]
-            is_no_cloud = step["is_pick_no_cloud"]
             reasoning = step["reasoning"]
 
-            # =====================================================
-            # [RECALL] When a history step is recall, use a dedicated display branch:
-            #   - Do not use the current step_data's img_idx (it points to the next round's
-            #     observation after the recall, not the keyframes of the recalled trajectory);
-            #     instead, fetch the display frames (display_cam_wrist/head) chosen by
-            #     SkillLib.recall from self.recall_results[target].
-            #   - The number of image placeholders stays consistent with regular steps
-            #     (2 images, or without top in 3cams mode), so they naturally slide out of
-            #     / get displayed with the history_maxlen window without extra counting logic.
-            #   - The text carries keyframes indices and reasoning so the VLM can understand
-            #     the recall result.
-            # =====================================================
             if act == "recall":
                 recall_info = self.recall_results.get(target, None)
                 step_prefix = (
@@ -618,52 +579,49 @@ class VLAMessageHandler:
                     all_images.append(self._make_image_ref(img_id + 1, 'cam_wrist', cam_img=recall_cam_img))
                     img_id += 2
                 else:
-                    history_text += f"{step_prefix}, (key frame observation omitted)；\n\n"
+                    history_text += f"{step_prefix}, (key frame observation omitted);\n\n"
                 continue
             # =====================================================
 
             # Build the basic text format
-            step_prefix = f"step{step_num}:action:{act},target:{target},bbox:{box},reasoning:{reasoning}"
+            # Field assembly aligns with the manipulation system prompt output rules:
+            #   - pick / place / open_door carry target and bbox (each appended only when present)
+            #   - all other actions carry only the action name
+            #   - reasoning is controlled by include_reasoning_in_history
+            if act in ("pick", "place", "open_door"):
+                step_prefix = f"step{step_num}:action:{act}"
+                if target:
+                    step_prefix += f",target:{target}"
+                if box:
+                    step_prefix += f",bbox:{box}"
+            else:
+                step_prefix = f"step{step_num}:action:{act}"
+            if self.include_reasoning_in_history and reasoning:
+                step_prefix += f",reasoning:{reasoning}"
             # -----
             if self.task_category == "manipulation":
-                # 1. Highest priority: first check whether the target is beyond the arm's physical reach
+                # Attention: the target is beyond the arm's physical reach
                 if step.get("target_out_of_reach", False) is True:
                     step_prefix += ",attention: The target object is out of your reachable range. The current distance exceeds the maximum arm reach."
-                # 2. Second priority: if the distance is fine (within range), check whether a visual point-cloud anomaly was triggered
-                elif is_no_cloud:
-                    step_prefix += ",attention: Your action was not executed. No point cloud was detected within the predicted bounding box. Please re-verify the object's visual position and output a more precise bbox."
             # -----
             # Check whether this history step is within the recent history_maxlen window
             if (total_history_count - idx) <= self.history_maxlen:
-                if use_3_cams:
-                    p_top = f"<image_{img_id}>"
-                    p_head = f"<image_{img_id + 1}>"
-                    p_wrist = f"<image_{img_id + 2}>"
-                    history_text += f"{step_prefix},observation at this time:{p_top} {p_head} {p_wrist};\n\n"
-                else:
-                    p_head = f"<image_{img_id}>"
-                    p_wrist = f"<image_{img_id + 1}>"
-                    history_text += f"{step_prefix},observation at this time:HEAD CAMERA:{p_head} WRIST CAMERA:{p_wrist};\n\n"
-                img_id = self._append_step_images(all_images, img_id, img_idx, use_3_cams)
+                p_head = f"<image_{img_id}>"
+                p_wrist = f"<image_{img_id + 1}>"
+                history_text += f"{step_prefix},observation at this time:HEAD CAMERA:{p_head} WRIST CAMERA:{p_wrist};\n\n"
+                img_id = self._append_step_images(all_images, img_id, img_idx, use_3_cams=False)
             else:
                 # For steps far beyond the window, add explicit semantic marker protection text to prevent the Client from filtering them out
-                history_text += f"{step_prefix}, (observation omitted)；\n\n"
+                history_text += f"{step_prefix}, (observation omitted);\n\n"
 
         # 6. Build current round observations (Current Observations)
-        if use_3_cams:
-            cur_top = f"<image_{img_id}>"
-            cur_head = f"<image_{img_id + 1}>"
-            cur_wrist = f"<image_{img_id + 2}>"
-            current_text = f"Your current observations are as follows:{cur_top} {cur_head} {cur_wrist};\n"
-            current_text += "Please continue navigating or output 'action: end' if you have reached the target."
-        else:
-            # Manipulation current observation (2 images)
-            cur_head = f"<image_{img_id}>"
-            cur_wrist = f"<image_{img_id + 1}>"
-            current_text = f"Your current observations are as follows:HEAD CAMERA:{cur_head} WRIST CAMERA:{cur_wrist};\n"
-            current_text += "Please select a manipulation action or output 'action: end' if you have finished the task."
+        # Manipulation current observation (2 images)
+        cur_head = f"<image_{img_id}>"
+        cur_wrist = f"<image_{img_id + 1}>"
+        current_text = f"Your current observations are as follows:HEAD CAMERA:{cur_head} WRIST CAMERA:{cur_wrist};\n"
+        current_text += "Please select a manipulation action or output 'action: end' if you have finished the task."
 
-        img_id = self._append_current_images(all_images, img_id, cam_img, use_3_cams)
+        img_id = self._append_current_images(all_images, img_id, cam_img, use_3_cams=False)
 
         # 7. Assemble the final all_user_contents sent to the large model
         all_user_contents = self._build_user_contents(history_text + current_text, all_images)
@@ -870,16 +828,6 @@ reasoning: your reasoning
 
             print(f"Error: Could not parse any choice from content: {content}")
             return None
-
-    def set_pick_no_cloud(self, target_entity=None):
-        """
-        Set the state of a pick that failed due to no point cloud
-        :param target_entity: name of the failed target entity
-        """
-        self.last_pick_no_cloud = True
-        self.last_pick_failed_target = target_entity
-        # print(f"[VLM Handler] Pick failed due to no point cloud for target: {target_entity}")
-
 
     def _build_recall_target_summary(self, step_idx):
         """
@@ -1292,7 +1240,6 @@ reasoning: The trajectory starts with the gripper approaching the object; around
             target = step["target"]
             # Read the snapshot state flags
             is_premature = step["is_premature_manipulation"]
-            is_no_cloud = step["is_pick_no_cloud"]
             reasoning = step["reasoning"]
 
             # =====================================================
@@ -1342,7 +1289,7 @@ reasoning: The trajectory starts with the gripper approaching the object; around
 
             print(f"Round {n} step content: {step}")
 
-            # Priority branches: branch1 (is_premature) -> branch2 (target_out_of_reach) -> branch3 (moveforward blocked) -> branch4 (is_no_cloud) -> branch5 (normal)
+            # Priority branches: branch1 (is_premature) -> branch2 (target_out_of_reach) -> branch3 (moveforward blocked) -> branch5 (normal)
             # if is_premature:
             #     # branch1: manipulation skills attempted too early during navigation, target position not reached yet
             #     step_str += "Attention: The target object is out of your reachable range. The current distance exceeds the maximum arm reach."
@@ -1353,9 +1300,6 @@ reasoning: The trajectory starts with the gripper approaching the object; around
                                                    self.movedistance) < 0.1 and self.collision_feedback_open:
                 # branch3: forward movement blocked by an obstacle
                 step_str += "Attention: Forward movement blocked. The robot has detected an obstacle directly ahead and cannot proceed forward."
-            elif is_no_cloud:
-                # branch4: no point cloud during manipulation; out-of-range already excluded, meaning the arm is not correctly aligned with the object
-                step_str += "Attention:Your pick action for target object was not executed because the target object is not in the current field of wrist view. Please re-verify the object's visual position and output a more precise bbox."
             else:
                 # branch5: normal round, keep as-is (no attention needed)
                 pass

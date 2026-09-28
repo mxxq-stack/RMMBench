@@ -21,13 +21,13 @@ class WashVegSaladConfigManager(Multi_traget_container):
     - fixture_surface: island_island_group
     - destination_position: top
     - robot: position [3.050067173852504, -1.6998841861248737, 0.0], euler [0, 0, -1.57]
-    - inherited: Multi_traget_container (both target_entity and target_container are lists)
+    - Inherits: Multi_traget_container (both target_entity and target_container are lists)
     """
 
     def __init__(self, task_name, num_objects=[1, 3], **kwargs):
         super().__init__(task_name, num_objects, **kwargs)
         self.CONTAINER_CONFIG_TABLE = [
-            {"offset": -0.1, "y_set": 0.25, "direction": "top", "z_set": -0.01,"orient_offset":[0,0,1.57]},
+            {"offset": 0.85, "y_set": 0, "direction": "left", "z_set": -0.01,"orient_offset":[0,0,0]},
             {"offset": 0.2, "y_set": 0.05, "direction": "left", "z_set": 0.01},
             {"offset": 0, "y_set": 0.1, "direction": "top", "z_set": 0.01},
         ]
@@ -36,7 +36,7 @@ class WashVegSaladConfigManager(Multi_traget_container):
         self,
         workregion_offset=-0.55,
         workregion_y_set=0.05,
-        target_dim=(0.3, 0.25),
+        target_dim=(0.3, 0.4),
         grid_size=[2, 2],
     ):
         super().get_object_info(
@@ -48,10 +48,10 @@ class WashVegSaladConfigManager(Multi_traget_container):
 
     def get_condition_config(self, target_entity, target_container, **kwargs):
         """
-        Success condition: each target object is first placed into the sink to be washed, then finally placed into the target container.
+        Success condition: each target object is first placed into the sink for washing, and finally placed into the target container.
         In Multi_traget_container, target_container is a list; take the first element as the final container.
         target_entity is a list containing all target objects that need to be washed.
-        Each object gets its own asyn_sequence: sink first, then container.
+        Each object gets an independent asyn_sequence: sink first → then container.
         """
         container = target_container[0] if isinstance(target_container, list) else target_container
         sink = "sink_0"
@@ -78,10 +78,10 @@ class WashVegSaladConfigManager(Multi_traget_container):
 
     def get_instruction(self, target_entity, target_container, **kwargs):
         """
-        Generate the instruction text using declarative sentences, without exposing specific operation steps.
+        Generate the instruction text in declarative style, without exposing concrete operation steps.
         """
         instruction = [
-            "I want to make a vegetable salad, please wash the carrot, tomato, and cucumber and put them in the bowl."
+            "I want to make a vegetable salad, please wash the carrot, tomato, and cucumber and put them in the tray."
         ]
         self.config["task"]["instructions"] = instruction
         return self.config
@@ -93,11 +93,18 @@ class WashVegSaladTask(PrimitiveSeqTask):
     Task class for wash_multi_fruit_veg task.
 
     Task flow: pick → wash → place → end
-    Objects that need to be fixed: bowl (the container is placed on the countertop and must be attached to the arena)
+    Objects that need to be fixed: bowl (container placed on the countertop, must be attached to the arena)
     """
 
     def __init__(self, task_name, robot, **kwargs):
-        self.attach_objects = ["tray", "sink"]
+        self.attach_objects = ["tray", "sink",
+                               #         "carrot_0",
+                               # "tomato_2",
+                               # "cucumber_3",
+                               # "bell_pepper_1",
+                               # "eggplant_4",
+
+                               ]
         super().__init__(task_name, robot=robot, **kwargs)
 
     def build_from_config(self, eval=False, **kwargs):
@@ -105,12 +112,10 @@ class WashVegSaladTask(PrimitiveSeqTask):
         self.reset_entities_positions()
         self.attach_entities_to_arena()
 
-    def initialize_episode(self, physics, random_state):
-        super().initialize_episode(physics, random_state)
 
     def reset_entities_positions(self):
         """
-        Height adaptation: adjust the z coordinate according to each object's own height
+        Height adaptation: adjust the z coordinate based on each object's own height
         to avoid initial penetration/clipping.
         """
         if self.config_manager.all_entities is not None:
@@ -126,8 +131,8 @@ class WashVegSaladTask(PrimitiveSeqTask):
 
     def get_expert_skill_sequence(self, physics):
         """
-        Expert skill sequence: open the sink once first, then for each object run pick → place (sink) → pick → place (container) → observe, and finally end.
-        Only one object is in the sink at a time, to guarantee grasp success rate.
+        Expert skill sequence: open the sink once first, then for each object perform pick → place(sink) → pick → place(container) → observe, ending with end.
+        Only one object is in the sink at a time, to ensure grasp success rate.
         """
         target_entities = self.config_manager.target_entity
         container_name = self.target_container[0] if isinstance(self.target_container, list) else self.target_container
@@ -140,6 +145,7 @@ class WashVegSaladTask(PrimitiveSeqTask):
             skill_sequence.extend([
                 partial(SkillLib.pick, target_entity_name=entity),
                 partial(SkillLib.place, target_container_name="sink_0"),
+                partial(SkillLib.observe),
                 partial(SkillLib.pick, target_entity_name=entity),
                 partial(SkillLib.place, target_container_name=container_name),
                 partial(SkillLib.observe),

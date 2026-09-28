@@ -17,7 +17,7 @@ from pathlib import Path
 
 from RMMBench.robots.single_arm.franka import Franka
 
-task = 'pick_chocolate'
+task = 'store_non_alcoholic_drink'
 
 robot = "pandaomron"
 

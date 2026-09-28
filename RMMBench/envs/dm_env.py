@@ -14,8 +14,8 @@ class LM4ManipDMEnv(composer.Environment):
         self.reset_wait_step = reset_wait_step
         self.n_distractor = kwargs.get("n_distractor", 0)
         self.render_options = dict(
-            height=560,
-            width=560,
+            height=480,
+            width=720
         )
         self.register_pcd_generator()
         

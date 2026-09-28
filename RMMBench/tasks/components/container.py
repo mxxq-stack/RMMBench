@@ -159,7 +159,7 @@ class FlatContainer(Entity, ContainerMiXin):
     """
 
     def _build(self, 
-               z_threshold=0.04,
+               z_threshold=0.1,
                velocity_threshold=1.5,
                z_angle_threshold=25,
                **kwargs):

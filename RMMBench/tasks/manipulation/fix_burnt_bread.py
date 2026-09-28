@@ -22,12 +22,12 @@ class FixBurntBreadConfigManager(Multi_traget_container):
     - fixture_surface: stovetop_main_group
     - destination_position: bottom
     - robot: position [3.050067173852504, -1.6998841861248737, 0.0], euler [0, 0, -1.57]
-    - inherited: Multi_traget_container (both target_entity and target_container are lists)
+    - Inheritance: Multi_traget_container (both target_entity and target_container are lists)
 
     Task flow:
-    1. Take the burnt bread bread_21 from the plate → place it into the discard bowl
-    2. Pick up the fresh bread bread_9 → place it in the pan on the stovetop to pan-fry
-    3. Take the pan-fried bread from the pan → put it back on the original plate
+    1. Take the burnt bread bread_21 off the plate → put it into the discard bowl
+    2. Pick up the fresh bread bread_9 → put it into the pan on the stove to pan-fry
+    3. Take the fried bread out of the pan → put it back on the original plate
     """
 
     def __init__(self, task_name, num_objects=[1, 2], **kwargs):
@@ -42,7 +42,7 @@ class FixBurntBreadConfigManager(Multi_traget_container):
         self,
         workregion_offset=-0.62,
         workregion_y_set=-0.05,
-        target_dim=(0.25, 0.25),
+        target_dim=(0.4, 0.25),
         grid_size=[1, 2],
     ):
         super().get_object_info(
@@ -54,24 +54,31 @@ class FixBurntBreadConfigManager(Multi_traget_container):
 
     def get_condition_config(self, target_entity, target_container, **kwargs):
         """
-        Success condition: the burnt bread is in the discard tray and the pan-fried bread is on the plate.
-        target_container = ["plate_0", "pan_1", "tray_0"]
-        - target_container[0] = plate_0 (final placement container)
-        - target_container[2] = tray_0 (discard tray)
+        Success conditions: asyn_sequence in expert-sequence order, ordered_indices=[0, 1, 2, 3]:
+        - Stage 0: burnt bread target_entity[0] placed into the discard tray
+        - Stage 1: fresh bread target_entity[1] placed into the pan to fry (supplementary step)
+        - Stage 2: turn on the stove knob stove_0/knob_front_right
+        - Stage 3: fried bread target_entity[1] placed back on the original plate
 
-        bread_21 (burnt bread) should go into tray_0,
-        bread_9 (pan-fried bread) should be put back on plate_0.
+        The bread being in the pan is a transient state (it will be taken out afterwards), so a plain
+        contain condition cannot hold simultaneously with contain(plate) at the final moment;
+        the stage-memory semantics of asyn_sequence must be used.
         """
         plate = target_container[0] if isinstance(target_container, list) else target_container
+        pan = target_container[1] if isinstance(target_container, list) and len(target_container) > 1 else target_container
         tray = target_container[2] if isinstance(target_container, list) and len(target_container) > 2 else target_container
-        print("target_container", target_container)
-        print("target_entity", target_entity)
-        and_conditions = [
-            dict(contain=dict(container=tray, entities=[target_entity[0]])),
-            dict(contain=dict(container=plate, entities=[target_entity[1]])),
-            dict(is_open=dict(container="stove_0", joint_name="knob_front_right")),
-        ]
-        conditions_config = dict(and_conditions=and_conditions)
+
+        conditions_config = dict(
+            asyn_sequence=dict(
+                condition_sets=[
+                    dict(contain=dict(container=tray, entities=[target_entity[0]])),
+                    dict(contain=dict(container=pan, entities=[target_entity[1]])),
+                    dict(is_open=dict(container="stove_0", joint_name="knob_front_right")),
+                    dict(contain=dict(container=plate, entities=[target_entity[1]])),
+                ],
+                ordered_indices=[1, 3],
+            )
+        )
         self.config["task"]["conditions"] = conditions_config
 
     def get_instruction(self, target_entity, target_container, **kwargs):
@@ -94,8 +101,8 @@ class FixBurntBreadTask(PrimitiveSeqTask):
 
     Task flow:
     1. pick bread_21 (burnt bread) → place bowl (discard bowl) → observe
-    2. pick bread_9 (fresh bread) → place pan (stovetop pan) → observe
-    3. pick bread_9 (pan-fried bread) → place plate (original plate) → observe
+    2. pick bread_9 (fresh bread) → place pan (stove pan) → observe
+    3. pick bread_9 (fried bread) → place plate (original plate) → observe
     4. end
 
     Objects that need to be fixed: plate, stove, pan, bowl
@@ -120,7 +127,7 @@ class FixBurntBreadTask(PrimitiveSeqTask):
     def reset_entities_positions(self):
         """
         Height adaptation: adjust the z coordinate according to each object's own height
-        to avoid initial penetration/clipping.
+        to avoid initial interpenetration.
         """
         if self.config_manager.all_entities is not None:
             entities = self.config_manager.all_entities
@@ -137,8 +144,8 @@ class FixBurntBreadTask(PrimitiveSeqTask):
         """
         Expert skill sequence:
         1. pick bread_21 (burnt bread) → place bowl (discard bowl) → observe
-        2. pick bread_9 (fresh bread) → place pan (stovetop pan) → observe
-        3. pick bread_9 (pan-fried bread) → place plate (original plate) → observe
+        2. pick bread_9 (fresh bread) → place pan (stove pan) → observe
+        3. pick bread_9 (fried bread) → place plate (original plate) → observe
         4. end
 
         target_entity = ["bread_21", "bread_9"]
@@ -163,7 +170,7 @@ class FixBurntBreadTask(PrimitiveSeqTask):
             partial(SkillLib.place, target_container_name=tray),
             partial(SkillLib.observe),
         ])
-        # Step 2: pick the fresh bread → pan-fry it → rotate the knob to heat
+        # Step 2: pick the fresh bread → put it in the pan to fry → rotate the knob to heat
         skill_sequence.extend([
             partial(SkillLib.pick, target_entity_name=fresh_bread),
             partial(SkillLib.place, target_container_name=pan),
@@ -172,7 +179,7 @@ class FixBurntBreadTask(PrimitiveSeqTask):
             partial(SkillLib.rotate_knob),
             partial(SkillLib.observe),
         ])
-        # Step 3: take the pan-fried bread from the pan → put it back on the plate
+        # Step 3: take the fried bread out of the pan → put it back on the plate
         skill_sequence.extend([
             partial(SkillLib.pick, target_entity_name=fresh_bread),
             partial(SkillLib.place, target_container_name=plate),
@@ -188,12 +195,12 @@ class FixBurntBreadTask(PrimitiveSeqTask):
 
 @register.add_config_manager("fix_burnt_bread_1")
 class FixBurntBread1ConfigManager(FixBurntBreadConfigManager):
-    def __init__(self, task_name, num_objects=[0, 3], **kwargs):
+    def __init__(self, task_name, num_objects=[1, 2], **kwargs):
         super().__init__(task_name, num_objects, **kwargs)
 
     def get_seen_task_config(self):
-        self.seen_object = ["bread_21", "donut_15","bread_3"]
-        self.distractor = ["bread_10"]
+        self.seen_object = ["bread_21","bread_3"]
+        self.distractor = ["donut_15"]
         self.mid_container = [
             {
                 "plate_11": [
@@ -226,8 +233,8 @@ class FixBurntBread2ConfigManager(FixBurntBreadConfigManager):
         super().__init__(task_name, num_objects, **kwargs)
 
     def get_seen_task_config(self):
-        self.seen_object = ["bread_21", "","bread_9"]
-        self.distractor = ["bread_11", "cake_9", "donut_13", "bread_20"]
+        self.seen_object = ["bread_21","bread_9"]
+        self.distractor = [ "cake_9", "donut_13"]
         self.mid_container = [
             {
                 "plate_12": [

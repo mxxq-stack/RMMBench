@@ -961,6 +961,7 @@ class SkillLib:
             obs = env.get_observation()
             observations.append(obs)
             waypoints.append(np.concatenate([pos, quaternion_to_euler(quat), np.ones(2)*0.04]))
+        SkillLib.lift(env)
         observations.pop(-1)
         assert len(observations) == len(waypoints), f"observations and waypoints should have the same length, {len(observations)} and {len(waypoints)}"
         if env.task.entities[target_container_name].is_open(env.physics):

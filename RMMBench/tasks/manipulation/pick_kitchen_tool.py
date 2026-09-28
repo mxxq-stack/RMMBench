@@ -129,6 +129,7 @@ class PickCanOpenerTask(PrimitiveTask):
                 ])
         skill_sequence.extend([partial(SkillLib.end)])
         skill_sequence = self.remove_second_last(skill_sequence)
+
         return skill_sequence
 
 

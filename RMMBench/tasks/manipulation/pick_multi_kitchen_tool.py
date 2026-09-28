@@ -26,16 +26,16 @@ class PickCanOpenerBottleOpenerConfigManager(Multi_traget_container):
     def __init__(self, task_name, num_objects=[4, 2], **kwargs):
         super().__init__(task_name, num_objects, **kwargs)
         self.CONTAINER_CONFIG_TABLE = [
-            {"offset": 0.25, "y_set": 0.05, "direction": "left", "z_set": 0.01},
-            {"offset": 0.2, "y_set": 0.05, "direction": "right", "z_set": 0.01},
+            {"offset": 0.28, "y_set": 0.05, "direction": "left", "z_set": 0.01},
+            {"offset": 0.28, "y_set": 0.05, "direction": "right", "z_set": 0.01},
             {"offset": 0, "y_set": 0.1, "direction": "top", "z_set": 0.01},
         ]
 
     def get_object_info(
         self,
         workregion_offset=0,
-        workregion_y_set=0.1,
-        target_dim=(0.3, 0.25),
+        workregion_y_set=0.18,
+        target_dim=(0.3, 0.3),
         grid_size=[10, 10],
     ):
         super().get_object_info(
@@ -119,9 +119,10 @@ class PickCanOpenerBottleOpenerTask(PrimitiveSeqTask):
 
     def get_expert_skill_sequence(self, physics):
         """
-        Expert skill sequence: iterate by class; the outer enumerate(target_entities) determines the current class
-        and its corresponding container, while the inner loop visits each object in the class with
-        pick → place (corresponding container) → observe; finally the redundant trailing observe is removed and end is appended.
+        Expert skill sequence: iterate over each class; the outer enumerate(target_entities) determines
+        the current class and its corresponding container, and the inner loop iterates over each object
+        in that class with pick → place(corresponding container) → observe; finally strip the trailing
+        redundant observe and append end.
         """
         target_entities = self.config_manager.target_entity
         skill_sequence = []
@@ -140,7 +141,7 @@ class PickCanOpenerBottleOpenerTask(PrimitiveSeqTask):
 
 @register.add_config_manager("pick_whisk_knife_0")
 class PickWhiskKnifeConfigManager(PickCanOpenerBottleOpenerConfigManager):
-    def __init__(self, task_name, num_objects=[4, 2], **kwargs):
+    def __init__(self, task_name, num_objects=[3, 2], **kwargs):
         self.robocasa_scene = "ONE_WALL_LARGE_9",
         super().__init__(task_name, num_objects, **kwargs)
 

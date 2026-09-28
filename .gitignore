@@ -41,3 +41,4 @@ Thumbs.db
 *.npy
 *.tar
 *.tar.gz
+test/

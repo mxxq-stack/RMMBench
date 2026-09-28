@@ -26,8 +26,8 @@ class PlaceBreadJamKnifeConfigManager(Multi_traget_container):
     def __init__(self, task_name, num_objects=[2, 3], **kwargs):
         super().__init__(task_name, num_objects, **kwargs)
         self.CONTAINER_CONFIG_TABLE = [
-            {"offset": 0.25, "y_set": 0.05, "direction": "left", "z_set": 0.01},
-            {"offset": 0.25, "y_set": 0.05, "direction": "right", "z_set": 0.01},
+            {"offset": 0.28, "y_set": 0.05, "direction": "left", "z_set": 0.01},
+            {"offset": 0.28, "y_set": 0.05, "direction": "right", "z_set": 0.01},
             {"offset": 0, "y_set": 0.1, "direction": "top", "z_set": 0.01},
         ]
 
@@ -35,7 +35,7 @@ class PlaceBreadJamKnifeConfigManager(Multi_traget_container):
         self,
         workregion_offset=0,
         workregion_y_set=0.1,
-        target_dim=(0.3, 0.25),
+        target_dim=(0.35, 0.3),
         grid_size=[10, 10],
     ):
         super().get_object_info(
@@ -84,9 +84,9 @@ class PlaceBreadJamKnifeTask(PrimitiveTask):
 
     def __init__(self, task_name, robot, **kwargs):
         self.attach_objects = [
-            "tray", "stove",  # containers and distractor fixture
-            "bread", "jam", "knife", "waffle", "syrup_bottle", "fork", "bagel", "butter_stick",  # target objects
-            "peanut_butter_jar", "spoon", "honey_bottle", "donut", "cheese", "spatula",  # distractors
+            "tray", "stove",  # container and distractor fixtures
+            # "bread", "jam", "knife", "waffle", "syrup_bottle", "fork", "bagel", "butter_stick",  # target objects
+            # "peanut_butter_jar", "spoon", "honey_bottle", "donut", "cheese", "spatula",  # distractors
         ]
         super().__init__(task_name, robot=robot, **kwargs)
 
@@ -118,6 +118,8 @@ class PlaceBreadJamKnifeTask(PrimitiveTask):
 
                 if "chips" in k:
                     height = 0.015
+                if height == 0:
+                    height += 0.02
                 entity.init_pos[2] += height
 
     def get_expert_skill_sequence(self, physics):
@@ -238,7 +240,7 @@ class PlaceBreadJamKnife1Task(PlaceBreadJamKnifeTask):
 # ===== B03 sub-task 2 variant: semantic & commonsense =====
 @register.add_config_manager("place_waffle_syrup_fork_1")
 class PlaceWaffleSyrupFork1ConfigManager(PlaceWaffleSyrupForkConfigManager):
-    def __init__(self, task_name, num_objects=[2, 3], **kwargs):
+    def __init__(self, task_name, num_objects=[2, 2], **kwargs):
         super().__init__(task_name, num_objects, **kwargs)
 
     def get_seen_task_config(self):

@@ -10,16 +10,15 @@ from RMMBench.utils.skill_lib import SkillLib
 @register.add_config_manager("classify_chocolate_snacks")
 class ClassifyChocolateSnacksConfigManager(Multi_traget_container):
     """
-    Multi-target manipulation task: put several kinds of snacks onto the shelf_1 shelf.
+    Multi-target manipulation task: place multiple snacks onto the shelf shelf_1.
 
     Config source: task_config.json["classify_snacks_on_shelf"]
-    - seen_object: ["bagged_food_0", "bar_0", "boxed_food_0"] (flat list; the parent class samples num_objects[1]
-                    objects from it as target_entity)
+    - seen_object: ["bagged_food_0", "bar_0", "boxed_food_0"] (flat list; the parent class samples num_objects[1] items from it as target_entity)
     - seen_container: ["shelf_1"] (list; the parent class uses the whole list as target_container)
     - robocasa_scene: U_SHAPED_LARGE_1
     - fixture_surface: island_island_group
     - destination_position: bottom
-    - inherited: Multi_traget_container (both target_entity and target_container are lists)
+    - Inheritance: Multi_traget_container (both target_entity and target_container are lists)
     """
 
     def __init__(self, task_name, num_objects=[2, 2], **kwargs):
@@ -35,37 +34,17 @@ class ClassifyChocolateSnacksConfigManager(Multi_traget_container):
         super().get_object_info(workregion_offset, workregion_y_set,
                                 target_dim=target_dim, grid_size=grid_size)
 
-    # def load_containers(self, target_container, offset=0, y_set=0.5, direction="top", z_set=0.03):
-    #     super().load_containers(target_container, offset, y_set, direction, z_set)
-    #     # if target_container is not None:
-    #     #     if self.work_info and self.target_container:
-    #     #         container_info = self.get_container_info_from_workregion(
-    #     #             self.work_info,
-    #     #             anchor=self.destination_position,
-    #     #             offset=offset,
-    #     #             y_set=y_set,
-    #     #             direction=direction,
-    #     #             z_set=z_set,
-    #     #         )
-    #     #         container_config = self.get_entity_config(
-    #     #             target_container,
-    #     #             position=container_info["position"],
-    #     #             orientation=[container_info["orientation"][0], container_info["orientation"][1], container_info["orientation"][2] + 0.01]
-    #     #         )
-    #     #         self.config["task"]["components"].append(container_config)
-
     def get_condition_config(self, target_entity, target_container, **kwargs):
         """
-        Success condition: all target objects are placed inside the container and at rest.
-        In Multi_traget_container, target_container is a list; take the first element as the detection container.
-        target_entity is itself a list and is passed in directly.
+        Success conditions: all target objects placed inside the container and at rest.
+        In Multi_traget_container, target_container is a list; take the first element as the checking container;
+        target_entity itself is a list and is passed in directly.
         """
         container = target_container[0] if isinstance(target_container, list) else target_container
         conditions_config = dict(
-            contain_v=dict(
+            contain=dict(
                 container=container,
                 entities=target_entity,
-                vel_th=0.01,
             )
         )
         self.config["task"]["conditions"] = conditions_config
@@ -101,15 +80,9 @@ class ClassifyChocolateSnacksTask(PrimitiveTask):
                     height = 0.015
                 entity.init_pos[2] += height
 
-    def attach_entities_to_arena(self):
-        """Attach all entities (fixtures including the shelf, stove, sink, and all objects) to the scene"""
-        for key, entity in self.entities.items():
-            entity.detach()
-            self._arena.attach(entity)
-
     def get_expert_skill_sequence(self, physics):
         """
-        Expert skill sequence: multi-target pick → place → observe loop, followed by end.
+        Expert skill sequence: multi-target pick → place → observe loop, then end.
         target_entity is a list and target_container is also a list; take target_container[0] as the placement container.
         """
         target_entities = self.config_manager.target_entity
