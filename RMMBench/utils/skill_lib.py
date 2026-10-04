@@ -1175,6 +1175,7 @@ class SkillLib:
 
         return observations, waypoints, False, False
 
+
     @staticmethod
     def open_sink(env, target_entity_name, **kwargs):
         """

@@ -311,7 +311,6 @@ class VLAMessageHandler:
         self.allow_entities = allow_entities
         self.target_out_of_reach = target_out_of_reach
         self.movedistance = movedistance
-        print("movedistance:", movedistance)
         # Build the standardized prompt components
         system_prompt, images, user_contents = self.build_prompt_components(
             n, img, instruction, action=action, vlm_response=self.vlm_response
@@ -597,22 +596,22 @@ class VLAMessageHandler:
             else:
                 step_prefix = f"step{step_num}:action:{act}"
             if self.include_reasoning_in_history and reasoning:
-                step_prefix += f",reasoning:{reasoning}"
+                step_prefix += f", reasoning:{reasoning}"
             # -----
             if self.task_category == "manipulation":
                 # Attention: the target is beyond the arm's physical reach
                 if step.get("target_out_of_reach", False) is True:
-                    step_prefix += ",attention: The target object is out of your reachable range. The current distance exceeds the maximum arm reach."
+                    step_prefix += " Attention: The target object is out of your reachable range. The current distance exceeds the maximum arm reach."
             # -----
             # Check whether this history step is within the recent history_maxlen window
             if (total_history_count - idx) <= self.history_maxlen:
                 p_head = f"<image_{img_id}>"
                 p_wrist = f"<image_{img_id + 1}>"
-                history_text += f"{step_prefix},observation at this time:HEAD CAMERA:{p_head} WRIST CAMERA:{p_wrist};\n\n"
+                history_text += f"{step_prefix} Observation before this action:HEAD CAMERA:{p_head} WRIST CAMERA:{p_wrist};\n\n"
                 img_id = self._append_step_images(all_images, img_id, img_idx, use_3_cams=False)
             else:
                 # For steps far beyond the window, add explicit semantic marker protection text to prevent the Client from filtering them out
-                history_text += f"{step_prefix}, (observation omitted);\n\n"
+                history_text += f"{step_prefix} (observation omitted);\n\n"
 
         # 6. Build current round observations (Current Observations)
         # Manipulation current observation (2 images)

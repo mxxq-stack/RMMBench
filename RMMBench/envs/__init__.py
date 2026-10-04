@@ -24,8 +24,9 @@ def load_env(task,
              config=None, 
              time_limit=float('inf'), 
              reset_wait_step=10, 
-             episode_config=None, 
+             episode_config=None,
              random_init=False,
+             fix_base=False,
              **kwargs):
     """
     load environment with given config
@@ -56,6 +57,7 @@ def load_env(task,
     assert robot_config is not None, f"robot {robot} is not supported"
     robot_config_overide = default_config.get("robot", {})
     robot_config.update(robot_config_overide)
+    robot_config["fix_base"] = fix_base
     # print("robot_config_overide:", robot_config_overide)
     # print("robot config:", robot_config)
     robot = register.load_robot(robot)(**robot_config)

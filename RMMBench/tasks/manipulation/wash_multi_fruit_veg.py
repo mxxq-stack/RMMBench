@@ -139,6 +139,7 @@ class WashVegSaladTask(PrimitiveSeqTask):
         skill_sequence = [
             partial(SkillLib.pick, body_name="sink_0/handle"),
             partial(SkillLib.open_sink, target_entity_name="sink_0"),
+            # partial(SkillLib.lift),
             partial(SkillLib.observe),
         ]
         for entity in target_entities:

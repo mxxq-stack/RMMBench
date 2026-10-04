@@ -68,8 +68,6 @@ class BenchTaskConfigManager():
         with open(os.path.join(PROJECT_ROOT, "configs/task_config.json"), "r") as f:
             configs = json.load(f)
         config = configs.get("default", {})
-        # print("task_name:", task_name)
-        # print("find_key_by_value(name2config, task_name):", find_key_by_value(name2config, task_name))
         config.update(configs.get(find_key_by_value(name2config, task_name), None))
         if config is None: 
             raise ValueError(f"Task {task_name} is invalid. Check the valid ones task_config.json file.")
@@ -96,22 +94,10 @@ class BenchTaskConfigManager():
         elif self.unseen_object is None and self.distractor is not None:
             self.unseen_object = self.distractor
 
-        # Parse mid_container: [{"pan_0": ["apple"]}] → {"pan_0": ["apple"]}
-        # Initialize to empty dicts by default: mid_mapping() or _process_single_layout will
-        # rebuild and overwrite them; prevents AttributeError in get_object_info / load_objects /
-        # load_containers for subclasses that never call mid_mapping() (e.g. SelectSnacksToTrayConfigManager).
+
         self.mid_container_mapping = {}
         self.container_mapping = {}
-        #
-        # if self.mid_container:
-        #     seen_flat = set(flatten_list(self.seen_container)) if self.seen_container is not None else set()
-        #
-        #     for item in self.mid_container:
-        #         if isinstance(item, dict):
-        #             for parent, children in item.items():
-        #                 target_map = self.container_mapping if parent in seen_flat else self.mid_container_mapping
-        #                 target_map[parent] = children
-            #for container in flatten_list(self.seen_container):
+
 
 
         if "work_region" in self.config["task"]:
@@ -131,14 +117,8 @@ class BenchTaskConfigManager():
                 fixture_info = FIXTURES_CONFIG[scene_name][self.extract_base_name(fixture)]
                 fixture_config = self.get_entity_config(fixture, fixture_info["position"], fixture_info["orientation"])
                 self.config["task"]["components"].append(fixture_config)
-
-
         self.kwargs = kwargs
 
-        # if isinstance(self.num_objects, list):
-        #     self.num_object = random.choice(self.num_objects)
-        # elif isinstance(self.num_objects, int):
-        #     self.num_object = self.num_objects
 
     def get_all_entities(self,seen_object=None,distractor=None,seen_container=None,init_container=None):
         self.all_entities = flatten_list(seen_object)+flatten_list(distractor)+flatten_list(seen_container)+flatten_list(init_container)
@@ -148,9 +128,7 @@ class BenchTaskConfigManager():
         self.all_cleaned_entities = [self.extract_base_name(entity) for entity in self.all_entities ]
 
     def extract_base_name(self, name):
-        # Use a regex to match a trailing "_" followed by one or more digits:
-        # \d+ matches one or more digits, $ anchors to the end of the string
-        print("name:",name)
+
         if isinstance(name, list):
             name = flatten_list(name)[0]
         return re.sub(r'_\d+$', '', name)
@@ -158,7 +136,6 @@ class BenchTaskConfigManager():
     def get_camera_config(self):
         camera_task_name = find_key_by_value(name2config, self.task_name)
         self.config["task"]["camera_task_name"] = camera_task_name
-        print("self.config:", self.config)
 
     @staticmethod
     def _flatten_entities(entities):
@@ -182,7 +159,6 @@ class BenchTaskConfigManager():
             scene_name = self.robocasa_scene.rsplit("_",1)[0]
             workspace = configs[scene_name][self.fixture_surface]["workspace"]
             self.work_info = get_work_info(workspace,target_dim=target_dim, anchor=self.destination_position,offset_dist=workregion_offset,y_set=workregion_y_set)
-            print("self.work_info:", self.work_info)
             workregion = self.work_info["workregion"]
             mid_children_count = sum(len(children) for children in self.mid_container_mapping.values())
             mid_parents_count = len(self.mid_container_mapping)
@@ -213,8 +189,6 @@ class BenchTaskConfigManager():
         x_mid = (xmin + xmax) / 2
         y_mid = (ymin + ymax) / 2
 
-        # Definition: robot's side -> {direction: (target coordinates, offset axis)}
-        # The sign of offset follows the right-hand rule and the viewing direction
         mapping = {
             "left": {  # Robot looks rightward from Xmin
                 "left": [x_mid+y_set, ymax + offset],  # Left-hand side is Y+
@@ -348,10 +322,8 @@ class BenchTaskConfigManager():
             self.distractor = other_entity
 
         self.target_entity, self.target_container, self.init_container = target_entity, target_container, init_container
-        print("config_self_target_entity:",self.target_entity)
         self.get_object_info()
         self.load_robocasa_scene()
-        # self.load_objects( target_entity=target_entity)
 
 
         self.load_containers(target_container=target_container)
@@ -471,7 +443,6 @@ class BenchTaskConfigManager():
                         target_map[parent] = children
 
     def load_objects(self, target_entity):
-        print("self.work_info", self.work_info)
         if self.work_info:
             orientation = self.work_info["object_orientation"]
             all_objects = flatten_list(self.target_entity) + flatten_list(self.distractor)
@@ -489,9 +460,7 @@ class BenchTaskConfigManager():
             z = self.work_info["z"]
             points_3d = [[x, y, z] for x, y in self.sampled_points]
             point_idx = 0
-            # Place regular objects on grid points
-            print("regular_objects:", regular_objects)
-            print("points_3d:", points_3d)
+
             for obj in regular_objects:
                 object_config = self.get_entity_config(obj,
                                                        position=points_3d[point_idx],
@@ -598,7 +567,6 @@ class Multi_traget_container(BenchTaskConfigManager):# Handles both flat and nes
         # Backward compat: old callers may pass other_entity=, redirect to distractor
 
         self.target_entity, self.target_container, self.init_container = target_entity, target_container, init_container
-        print("config_self_target_entity:",self.target_entity)
         self.get_object_info()
         self.load_robocasa_scene()
         # self.load_objects( target_entity=target_entity)
@@ -676,7 +644,6 @@ class ClassifyConfigManager(BenchTaskConfigManager):
         else:
             container = None
         mid_contain=self.mid_contain
-        print("classy target entity:", target_entity)
 
         return self.get_task_config(target_entity=target_entity,
                                     target_container=container,
@@ -727,8 +694,7 @@ class ClassifyConfigManager(BenchTaskConfigManager):
             
             regular_objects = [obj for obj in all_objects if obj not in mid_children]
             self.objects = regular_objects + list(self.mid_container_mapping.keys())
-            print("self.objects:", self.objects)
-            
+
             z = self.work_info["z"]
             points_3d = [[x, y, z] for x, y in self.sampled_points]
             
@@ -796,11 +762,9 @@ class ClusterConfigManager(BenchTaskConfigManager):
     def load_containers(self, target_container):
         assert isinstance(target_container, list), "containers should be more than 2 in clustering tasks"
         for i, container in enumerate(target_container):
-            print("container:",container)
             container_config = self.get_entity_config(container,
                                                       position=[(i-0.5)*0.6, random.uniform(-0.1, 0.1), 0.8], 
                                                       specific_name=f"{container}_{i}")
-            print("container_config:",container_config)
             self.config["task"]["components"].append(container_config)
     
     def load_objects(self, target_entity, **kwargs):
@@ -926,10 +890,6 @@ class NavigationConfigManager(BenchTaskConfigManager):
         # 6. Compute the result and print
         self.target_bbox = self.center2bbox(pos)
 
-        # print("self.center_pos:", self.center_pos)
-        # print(f"target_entity_name: {target_entity}")
-        # print(f"self.target_object_info[position]: {pos}")
-        # print(f"self.target_bbox: {self.target_bbox}")
 
 
     def get_condition_config(self, target_entity, **kwargs):
@@ -1013,7 +973,6 @@ class CompositeNavigationConfigManager(NavigationConfigManager):
         self.merged_split_ratio = []
 
         for idx, cfg in enumerate(self.composite_configs):
-            print("cfg: ", cfg)
 
             seen_object = cfg.get("seen_object", [])
             distractor = cfg.get("distractor", [])

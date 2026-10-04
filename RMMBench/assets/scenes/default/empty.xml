@@ -3,7 +3,7 @@
     <visual>
         <map force="0.1" fogend="10" shadowclip="0.2" />
         <headlight diffuse="0.3 0.3 0.3" ambient="0.3 0.3 0.3" specular="0.3 0.3 0.3" />
-        <quality shadowsize="16384" offsamples="16"/>
+        <quality shadowsize="0" offsamples="16"/>
         <global offwidth="1280" offheight="960"/>
     </visual>
   <default>

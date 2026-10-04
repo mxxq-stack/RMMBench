@@ -15,6 +15,22 @@ DEFAULT_MAX_TOKENS = 8192
 BACKEND_CONFIGS = {
     # ==== Real backend names (valid --vlm-backend values for vlm_eval) ====
 
+    # Meituan aigc friday platform (OpenAI-compatible native gateway): https://aigc.sankuai.com
+    # Auth: Bearer <applied AppId> (attached automatically by vlm_client/base.py); AppId falls
+    # back to env FRIDAY_APPID. Use eval_friday.py with these backends.
+    "friday-kimi": {
+        "base_url": "https://aigc.sankuai.com/v1/openai/native/chat/completions",
+        "model": "kimi-k3",
+        "api_key_env": "FRIDAY_APPID",
+        "extra_params": {},
+    },
+    "friday-deepseek": {
+        "base_url": "https://aigc.sankuai.com/v1/openai/native/chat/completions",
+        "model": "deepseek-v4-flash",
+        "api_key_env": "FRIDAY_APPID",
+        "extra_params": {"thinking": {"type": "disabled"}},
+    },
+
     # Gemini family (via the official OpenAI-compatible endpoint): https://ai.google.dev/gemini-api/docs/openai
     "gemini3flash": {
         "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",

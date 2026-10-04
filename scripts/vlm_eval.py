@@ -6,6 +6,7 @@ import cv2
 import traceback
 import json
 from dm_control import viewer
+from dm_control.rl.control import PhysicsError
 from tqdm import tqdm
 from datetime import datetime
 from scipy.spatial.transform import Rotation as R
@@ -27,6 +28,7 @@ from RMMBench.utils.navigation_utils import get_head_camera_navigation_view, dra
 
 os.environ["MUJOCO_GL"] = "egl"
 from multiprocessing import Pool
+import math
 import time
 
 
@@ -42,12 +44,12 @@ def get_args():
     parser.add_argument('--vlm-backend', default="deepseek-flash", type=str)
     # prompt_format is fixed to "openai" (vlm_client sends requests via the official OpenAI-compatible protocol).
     # The legacy prompt_image_map (custom gateway format) is kept inside the handler but no longer exposed as a CLI argument
-    parser.add_argument('--history-maxlen', default=2, type=int, help='History maxlen for VLM handler')
+    parser.add_argument('--history-maxlen', default=8, type=int, help='History maxlen for VLM handler')
     # Task and episode config
     parser.add_argument('--episode-config',
                         default=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..',
                                              'RMMBench', 'vlm_evaluation', 'configs', 'episodes',
-                                             'nav_episodes.json'),
+                                             'manipulation_episodes.json'),
                         type=str, help='Path to episode config JSON file (e.g. test_eval_pick.json)')
     parser.add_argument('--task-name', default="navigate_composite_to_wash_fruit", type=str,
                         help='Task name to evaluate directly (when episode-config is None, loads task via random init)')
@@ -81,6 +83,11 @@ def get_args():
                                              'RMMBench', 'vlm_evaluation', 'results'),
                         type=str, help='Directory to save evaluation results')
     parser.add_argument('--save-interval', type=int, default=1, help='Interval for saving results')
+    parser.add_argument('--resume-dir', default=None, type=str,
+                        help='Resume an interrupted run from a previous exp dir: episodes whose episode '
+                             'result.json already exists are loaded and skipped; the rest are re-run in the '
+                             'same dir, with stale episode dirs cleared first. Key eval args must match '
+                             'the original run.')
     parser.add_argument('--save-video', action="store_true", default=True,
                         help='Save video for the first episode of each task')
     parser.add_argument('--num-workers', type=int, default=1,
@@ -309,6 +316,142 @@ def save_episode_video(observations, video_dir, task_name, task_success):
     print(f"  Video saved to: {video_dir}")
 
 
+# ---- Crash tolerance / incremental saving / resume helpers ----
+
+# Args that define the experiment content; snapshotted into every episode result.json and strictly
+# re-checked on --resume-dir so a resumed run can never mix mismatched configs.
+RUN_META_KEYS = (
+    'episode_config', 'vlm_backend', 'tasks', 'task_name', 'seed', 'robot',
+    'use_graspnet', 'early_stop', 'visual_rays', 'collision_feedback',
+    'history_maxlen', 'max_skills_num',
+)
+
+
+def _sanitize_nan(obj):
+    """Recursively replace NaN/Inf floats with None so json.dump always produces valid JSON
+    (a diverged MuJoCo state can leak NaN into condition details / metrics)."""
+    if isinstance(obj, dict):
+        return {k: _sanitize_nan(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_sanitize_nan(v) for v in obj]
+    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    return obj
+
+
+def _make_failed_result(task_name, config_idx, task_category, task_type, exc):
+    """Assemble a schema-compatible degraded result for an episode that died from an uncaught
+    exception. A downgraded episode still counts in the aggregate denominator (sr=0) and records
+    the error for later inspection."""
+    return _sanitize_nan({
+        'task_name': task_name,
+        'config_idx': config_idx,
+        'vlm_skill_sequence': [],
+        'expert_skill_sequence': [],
+        'task_success': False,
+        'error': f"{type(exc).__name__}: {exc}",
+        'error_stack': traceback.format_exc(limit=8)[-3000:],
+        'task_category': task_category if task_category else 'manipulation',
+        'task_type': task_type,
+        'condition_leaf_details': {},
+        'condition_leaf_score': 0.0,
+        'iou_list': [],
+        'rs_segments': [],
+        'metrics': {
+            'sr': 0,
+            'path_completion': None,
+            'cr_manipulation': 0.0,
+            'cr_navigation': None,
+            'ee': None,
+            'rr_act': 0.0,
+            'iou': 0.0,
+            'rs': 0.0,
+        },
+    })
+
+
+def _is_physics_error(error_msg):
+    """Whether an episode error came from a MuJoCo physics divergence (mjWARN_BADQACC etc.)."""
+    return 'PhysicsError' in str(error_msg or '')
+
+
+def _clear_dir_contents(path):
+    """Delete everything inside path (keeping path itself) so a re-run starts from a clean dir.
+    Used (a) before restarting an episode after PhysicsError, and (b) when re-running an episode
+    whose previous attempt left img/debug_full leftovers but no result.json."""
+    if not os.path.isdir(path):
+        return
+    for root, dirs, files in os.walk(path, topdown=False):
+        for f in files:
+            try:
+                os.remove(os.path.join(root, f))
+            except OSError:
+                pass
+        for d in dirs:
+            try:
+                os.rmdir(os.path.join(root, d))
+            except OSError:
+                pass
+
+
+def build_run_meta(args):
+    """Snapshot of the args that define experiment content (see RUN_META_KEYS)."""
+    return {k: getattr(args, k) for k in RUN_META_KEYS}
+
+
+def _validate_run_meta(saved_meta, args, task_name, config_idx):
+    """Refuse to resume when any defining arg differs from the original run."""
+    current = {**build_run_meta(args), 'task_name': task_name}
+    diffs = [k for k in RUN_META_KEYS if saved_meta.get(k) != current.get(k)]
+    if diffs:
+        detail = '; '.join(f"{k}: saved={saved_meta.get(k)!r} vs current={current.get(k)!r}" for k in diffs)
+        raise SystemExit(
+            f"Resume aborted: run config mismatch for {task_name} episode_{config_idx + 1}. "
+            f"The episodes in --resume-dir were produced with different settings. Mismatched: {detail}"
+        )
+
+
+def _save_episode_result(episode_result, task_i_dir, run_meta):
+    """Incrementally persist one episode's full result dict as {episode_dir}/result.json.
+    Contains evaluation data only (never prompts/responses - those live in debug_full/).
+    This file is the single source of truth for resume detection."""
+    payload = dict(episode_result)
+    payload['run_meta'] = run_meta
+    os.makedirs(task_i_dir, exist_ok=True)
+    with open(os.path.join(task_i_dir, 'result.json'), 'w', encoding='utf-8') as f:
+        json.dump(payload, f, indent=4, ensure_ascii=False, default=str)
+
+
+def split_resumed(work_list, resume_dir, args):
+    """Split work items into (pending_items, resumed_results).
+    An episode counts as finished iff its result.json exists (run_meta strictly validated);
+    stale episode dirs without result.json are cleared so the re-run starts clean."""
+    resumed_results = {}
+    pending = []
+    for item in work_list:
+        task_name = item['task_name']
+        config_idx = item['config_idx']
+        task_i_dir = os.path.join(resume_dir, task_name, f"{task_name}_episode_{config_idx + 1}")
+        result_path = os.path.join(task_i_dir, 'result.json')
+        if os.path.isfile(result_path):
+            try:
+                with open(result_path, 'r', encoding='utf-8') as f:
+                    payload = json.load(f)
+            except (json.JSONDecodeError, OSError) as e:
+                print(f"[RESUME] Warning: failed to load {result_path} ({e}); will re-run this episode")
+                _clear_dir_contents(task_i_dir)
+                pending.append(item)
+                continue
+            saved_meta = payload.pop('run_meta', None)
+            if saved_meta is not None:
+                _validate_run_meta(saved_meta, args, task_name, config_idx)
+            resumed_results[(task_name, config_idx)] = payload
+        else:
+            _clear_dir_contents(task_i_dir)
+            pending.append(item)
+    return pending, resumed_results
+
+
 def evaluate_single_episode(args, task_name, episode_config, config_idx, logger, task_type, seed=None, video_dir=None,
                             img_dir=None, task_category='manipulation'):
     """
@@ -396,11 +539,23 @@ def evaluate_single_episode(args, task_name, episode_config, config_idx, logger,
     iou_list = []
     grasp_task = env.task.config_manager.grasp_task
     all_entities = env.task.component_name_list
-    print("all entities:", all_entities)
     all_cleaned_entities = env.task.cleaned_component_name_list
 
-    # all_cleaned_entities.append("fridge_handle")
-    # all_cleaned_entities.append("knob")
+    suffix_map = {
+        "sink": "handle",
+        "microwave": "handle",
+        "fridge": "handle",
+        "counter": "handle",
+        "stove": "knob",
+    }
+
+    for entity in all_cleaned_entities:
+        for name, suffix in suffix_map.items():
+            if name in entity:
+                new_part = f"{name}_{suffix}"
+                if new_part not in all_cleaned_entities:
+                    all_cleaned_entities.append(new_part)
+                break
 
     instruction = env.task.get_instruction()
 
@@ -408,11 +563,7 @@ def evaluate_single_episode(args, task_name, episode_config, config_idx, logger,
     target_container = env.task.config_manager.target_container
 
     robot_pos = env.task.robot.get_link_base_info(env.physics)["position"]
-    # Get expert skill sequence for topology comparison
 
-    # Initialize robot info
-    # init_ee_pos, init_ee_quat = list(env.robot.get_end_effector_pos(env.physics)), env.robot.get_end_effector_quat(
-    #     env.physics)
     if env.task.robot_params is not None:
         robot_init_info = env.task.robot_params
     else:
@@ -460,347 +611,449 @@ def evaluate_single_episode(args, task_name, episode_config, config_idx, logger,
     total_observations = {}
     start_time = time.time()
 
-    while n > 0:
-        step_idx = args.max_skills_num - n
+    step_idx = 0  # defined so the abort handler below always has a value to report
+    try:
+        while n > 0:
+            step_idx = args.max_skills_num - n
 
-        if args.visual_rays and task_category == "composite_navigation":
-            vlm_img_input = get_ray_assisted_observation(env)
+            if args.visual_rays and task_category == "composite_navigation":
+                vlm_img_input = get_ray_assisted_observation(env)
 
-        else:
-            vlm_img_input = [cv2.cvtColor(env.get_observation()["rgb"][i], cv2.COLOR_BGR2RGB) for i in range(6)]
-
-        # Save observation images if img_dir is provided
-        if img_dir is not None:
-            frame = np.vstack(
-                [np.hstack([vlm_img_input[4], vlm_img_input[2]]), np.hstack([vlm_img_input[3], vlm_img_input[5]])])
-            cv2.imwrite(os.path.join(img_dir, f"step{step_idx}_four_frame.png"), frame)
-
-        vlm_result = handler.request_vlm(
-            img=vlm_img_input,
-            n=step_idx,
-            instruction=instruction,
-            action=last_action,
-            robot_init_info=robot_init_info,
-            allow_entities=all_cleaned_entities,
-            target_out_of_reach=target_out_of_reach,
-            movedistance=movedistance
-        )
-        movedistance = 0
-        # Only possibly True when picking
-        target_out_of_reach = False
-
-        if not vlm_result:
-            logger.error("VLM response failed")
-            result['error'] = "VLM response failed"
-            break
-
-        bbox = vlm_result["bbox_2d"]
-        action = vlm_result["action"]
-        target_object = vlm_result["target_object"]
-        content = vlm_result["content"]
-        pts = vlm_result["pts"]
-        # Note: fridge_handle is now handled via the body_name mechanism and does not need conversion here
-        last_action = action
-        cam_view = vlm_result["cam_view"]
-        cam_pick = CAMERA_NAME_MAP.get(cam_view, CAMERA_NAME_MAP["wrist"])  # default wrist
-
-        # Record the skill
-        skill_record = {
-            'step': step_idx,
-            'skill_name': action,
-            'target': target_object,
-            'bbox': bbox,
-        }
-        vlm_skill_seq.append(skill_record)
-
-        # Execute skill
-        if action not in allowed_skills:
-            logger.warning(f"Unknown action: {action}")
-            break
-
-        skill_factory = allowed_skills[action]
-
-        if action == "pick":
-            # [DEBUG-BBOX-MAP] Original logic: match entity by target_object prefix (kept for debugging comparison)
-            # matches = [item for item in all_entities if item.startswith(target_object)]
-            # if not matches:
-            #     logger.warning(f"No matching entity found for {target_object}")
-            #     if args.early_stop:
-            #         break
-            #     n -= 1
-            #     continue
-            # match = matches[0]
-
-            # [DEBUG-BBOX-MAP] New logic: map the bbox to a specific entity_name or body_name
-            match = None
-            if bbox is not None:
-                match = get_entity_from_bbox(
-                    env,
-                    bbox=bbox,
-                    target_entity_name=target_object,
-                    cam_id=cam_pick,
-                    min_ratio=0
-                )
-                print(f"[DEBUG-BBOX-MAP] bbox={bbox} -> match={match}")
-
-            # [DEBUG-BBOX-MAP] fallback: if bbox mapping fails, fall back to the original prefix matching
-            if match is None:
-                matches = [item for item in all_entities if item.startswith(target_object)]
-                if not matches:
-                    logger.warning(f"No matching entity found for {target_object}")
-                    if args.early_stop:
-                        break
-                    n -= 1
-                    continue
-                match = matches[0]
-                print(f"[DEBUG-BBOX-MAP] fallback to prefix match: {match}")
-
-            # === Resolve match (may be in "entity_name/body_name" format) ===
-            match_entity = match
-            match_body = None
-            if "/" in match:
-                match_entity, match_body = match.split("/", 1)
-
-            # Write the entity name resolved from the bbox back into the skill record; preferred over the VLM's raw target when matching RRact params
-            vlm_skill_seq[-1]['matched_target'] = match
-
-            # 1. IoU computation
-            iou, mask = calculate_mask_bbox_iou(env, match_entity, bbox, cam_pick, body_name=match_body)
-            iou_list.append(iou)
-            save_mask(img_dir, step_idx, action, vlm_img_input[cam_pick], pts, mask)
-
-            # Reachability check
-            target_out_of_reach = is_target_out_of_reach(env, match_entity, body_name=match_body)
-            # handler.target_out_of_reach = target_out_of_reach
-            if target_out_of_reach:
-                obs, waypoints, stage_success, task_success = [None], [None], False, False
             else:
-                # 5. Compute lift height: look up entities by entity name
-                height = 0.08
-                if match_entity in env.task.entities:
-                    height = 2 * env.task.entities[match_entity].get_placement_height()
+                vlm_img_input = [cv2.cvtColor(env.get_observation()["rgb"][i], cv2.COLOR_BGR2RGB) for i in range(6)]
 
-                pick_bbox = bbox if bbox else [0, 0, 0, 0]
-                if bbox:
-                    # pick_bbox = [bbox[0] - 10, bbox[1] - 5, bbox[2] + 5, bbox[3] + 5]
-                    pick_bbox = bbox
+            # Save observation images if img_dir is provided
+            if img_dir is not None:
+                frame = np.vstack(
+                    [np.hstack([vlm_img_input[4], vlm_img_input[2]]), np.hstack([vlm_img_input[3], vlm_img_input[5]])])
+                cv2.imwrite(os.path.join(img_dir, f"step{step_idx}_four_frame.png"), frame)
 
-                print("pick_bbox:", pick_bbox)
-                print("match:", match)
+            vlm_result = handler.request_vlm(
+                img=vlm_img_input,
+                n=step_idx,
+                instruction=instruction,
+                action=last_action,
+                robot_init_info=robot_init_info,
+                allow_entities=all_cleaned_entities,
+                target_out_of_reach=target_out_of_reach,
+                movedistance=movedistance
+            )
+            movedistance = 0
+            # Only possibly True when picking
+            target_out_of_reach = False
 
-                # 6. Decide whether this is an interactive part, determining whether to pass body_name or target_entity_name
-                is_body_level = target_object is not None and any(
-                    name in target_object.lower() for name in BODY_LEVEL_TARGETS
-                )
-                if is_body_level:
-                    obs, waypoint, stage_success, task_success = skill_factory(
-                        body_name=match,
-                        use_graspnet=args.use_graspnet,
-                    )()
+            if not vlm_result:
+                logger.error("VLM response failed")
+                result['error'] = "VLM response failed"
+                break
+
+            bbox = vlm_result["bbox_2d"]
+            action = vlm_result["action"]
+            target_object = vlm_result["target_object"]
+            content = vlm_result["content"]
+            pts = vlm_result["pts"]
+            # Note: fridge_handle is now handled via the body_name mechanism and does not need conversion here
+            last_action = action
+            cam_view = vlm_result["cam_view"]
+            cam_pick = CAMERA_NAME_MAP.get(cam_view, CAMERA_NAME_MAP["wrist"])  # default wrist
+
+            # Record the skill
+            skill_record = {
+                'step': step_idx,
+                'skill_name': action,
+                'target': target_object,
+                'bbox': bbox,
+            }
+            vlm_skill_seq.append(skill_record)
+
+            # Execute skill
+            if action not in allowed_skills:
+                logger.warning(f"Unknown action: {action}")
+                break
+
+            skill_factory = allowed_skills[action]
+
+            if action == "pick":
+                # [DEBUG-BBOX-MAP] Original logic: match entity by target_object prefix (kept for debugging comparison)
+                # matches = [item for item in all_entities if item.startswith(target_object)]
+                # if not matches:
+                #     logger.warning(f"No matching entity found for {target_object}")
+                #     if args.early_stop:
+                #         break
+                #     n -= 1
+                #     continue
+                # match = matches[0]
+
+                # [DEBUG-BBOX-MAP] New logic: map the bbox to a specific entity_name or body_name
+                match = None
+                if bbox is not None:
+                    match = get_entity_from_bbox(
+                        env,
+                        bbox=bbox,
+                        target_entity_name=target_object,
+                        cam_id=cam_pick,
+                        min_ratio=0
+                    )
+                    print(f"[DEBUG-BBOX-MAP] bbox={bbox} -> match={match}")
+
+                # [DEBUG-BBOX-MAP] fallback: if bbox mapping fails, fall back to the original prefix matching
+                if match is None:
+                    if not target_object:
+                        # [SAFETY] VLM emitted pick without target_object and bbox mapping failed:
+                        # record it, mark this step failed and skip to the next skill step
+                        # (same flow as the "No matching entity found" branch below).
+                        logger.warning(f"[MISSING-PARAM] step={step_idx}: action=pick has no target_object, skipping this step")
+                        result['error'] = f"missing target_object at step {step_idx} (action=pick)"
+                        obs, waypoints, stage_success, task_success = [None], [None], False, False
+                        if args.early_stop:
+                            break
+                        n -= 1
+                        continue
+                    matches = [item for item in all_entities if item.startswith(target_object)]
+                    if not matches:
+                        logger.warning(f"No matching entity found for {target_object}")
+                        if args.early_stop:
+                            break
+                        n -= 1
+                        continue
+                    match = matches[0]
+                    print(f"[DEBUG-BBOX-MAP] fallback to prefix match: {match}")
+
+                # === Resolve match (may be in "entity_name/body_name" format) ===
+                match_entity = match
+                match_body = None
+                if "/" in match:
+                    match_entity, match_body = match.split("/", 1)
+
+                # Write the entity name resolved from the bbox back into the skill record; preferred over the VLM's raw target when matching RRact params
+                vlm_skill_seq[-1]['matched_target'] = match
+
+                # 1. IoU computation
+                iou, mask = calculate_mask_bbox_iou(env, match_entity, bbox, cam_pick, body_name=match_body)
+                iou_list.append(iou)
+                save_mask(img_dir, step_idx, action, vlm_img_input[cam_pick], pts, mask)
+
+                # Reachability check
+                target_out_of_reach = is_target_out_of_reach(env, match_entity, body_name=match_body)
+                # handler.target_out_of_reach = target_out_of_reach
+                if target_out_of_reach:
+                    obs, waypoints, stage_success, task_success = [None], [None], False, False
                 else:
-                    obs, waypoint, stage_success, task_success = skill_factory(
-                        target_entity_name=match_entity,
-                        use_graspnet=args.use_graspnet,
-                    )()
+                    # 5. Compute lift height: look up entities by entity name
+                    height = 0.08
+                    if match_entity in env.task.entities:
+                        height = 2 * env.task.entities[match_entity].get_placement_height()
 
-        elif action == "place":
-            # [DEBUG-BBOX-MAP] Original logic: use target_object directly as target_container_name
-            # place_target = target_object
+                    pick_bbox = bbox if bbox else [0, 0, 0, 0]
+                    if bbox:
+                        # pick_bbox = [bbox[0] - 10, bbox[1] - 5, bbox[2] + 5, bbox[3] + 5]
+                        pick_bbox = bbox
 
-            # [DEBUG-BBOX-MAP] New logic: map the bbox to a specific entity_name (sink is skipped, not in entities)
-            place_target = target_object
-            if bbox is not None and target_object != "sink":
-                # No valid object inside the bbox returns None
-                place_target = get_entity_from_bbox(
-                    env,
-                    bbox=bbox,
-                    target_entity_name=target_object,
-                    cam_id=5,  # head camera
-                    min_ratio=0.05
-                )
+                    print("pick_bbox:", pick_bbox)
+                    print("match:", match)
 
-                print(f"[DEBUG-BBOX-MAP] place bbox={bbox} -> entity={place_target}")
+                    # 6. Decide whether this is an interactive part, determining whether to pass body_name or target_entity_name
+                    is_body_level = target_object is not None and any(
+                        name in target_object.lower() for name in BODY_LEVEL_TARGETS
+                    )
+                    if is_body_level:
+                        obs, waypoint, stage_success, task_success = skill_factory(
+                            body_name=match,
+                            use_graspnet=args.use_graspnet,
+                        )()
+                    else:
+                        obs, waypoint, stage_success, task_success = skill_factory(
+                            target_entity_name=match_entity,
+                            use_graspnet=args.use_graspnet,
+                        )()
 
-            # [DEBUG-BBOX-MAP] fallback: if bbox mapping fails, fall back to the original target_object
-            # if place_target is None:
-            #     place_target = target_object
-            #     print(f"[DEBUG-BBOX-MAP] fallback to target_object: {place_target}")
-            # When bbox resolution succeeds, write the matched entity back into the skill record; preferred over the VLM's raw target when matching RRact params
-            if place_target is not None:
-                vlm_skill_seq[-1]['matched_target'] = place_target
+            elif action == "place":
+                # [DEBUG-BBOX-MAP] Original logic: use target_object directly as target_container_name
+                # place_target = target_object
 
-            if place_target is not None:
-                iou, mask = calculate_mask_bbox_iou(env, target_object, bbox, 5)
-                save_mask(img_dir, step_idx, action, vlm_img_input[5], pts, mask)
-            else:
-                iou = 0
-            iou_list.append(iou)
+                # [DEBUG-BBOX-MAP] New logic: map the bbox to a specific entity_name (sink is skipped, not in entities)
+                place_target = target_object
+                if bbox is not None and target_object != "sink":
+                    # No valid object inside the bbox returns None
+                    place_target = get_entity_from_bbox(
+                        env,
+                        bbox=bbox,
+                        target_entity_name=target_object,
+                        cam_id=5,  # head camera
+                        min_ratio=0.05
+                    )
 
-            # Skip skill execution when the target is out of reach
-            target_out_of_reach = is_target_out_of_reach(env, place_target)
-            # handler.target_out_of_reach = target_out_of_reach  # Sync to the handler so history backfill is correct
-            if place_target is None:
-                obs, waypoints, stage_success, task_success = [None], [None], False, False
-            elif target_out_of_reach:
-                obs, waypoints, stage_success, task_success = [None], [None], False, False
-            else:
-                obs, waypoint, stage_success, task_success = skill_factory(
-                    target_container_name=place_target,
-                    placement_th=height,
-                    bbox=bbox)()
+                    print(f"[DEBUG-BBOX-MAP] place bbox={bbox} -> entity={place_target}")
 
+                # [DEBUG-BBOX-MAP] fallback: if bbox mapping fails, fall back to the original target_object
+                # if place_target is None:
+                #     place_target = target_object
+                #     print(f"[DEBUG-BBOX-MAP] fallback to target_object: {place_target}")
+                # When bbox resolution succeeds, write the matched entity back into the skill record; preferred over the VLM's raw target when matching RRact params
+                if place_target is not None:
+                    vlm_skill_seq[-1]['matched_target'] = place_target
 
-        elif action == "open_door":
-            # [DEBUG-BBOX-MAP] Map the bbox to the container entity name (same entity-level mapping as place;
-            # open_door takes target_container_name, i.e. a key of env.task.entities, not the pick-style body_name)
-            door_target = None
-            if bbox is not None:
-                door_target = get_entity_from_bbox(
-                    env,
-                    bbox=bbox,
-                    target_entity_name=target_object,
-                    cam_id=5,  # head camera
-                    min_ratio=0.05
-                )
-
-                print(f"[DEBUG-BBOX-MAP] open_door bbox={bbox} -> entity={door_target}")
-
-            # Guard: the mapped name must be a key of env.task.entities, otherwise SkillLib.open_door raises KeyError
-            if door_target is not None and door_target not in env.task.entities:
-                print(f"[DEBUG-BBOX-MAP] open_door mapped entity {door_target} not in env.task.entities, discard")
-                door_target = None
-
-            # [DEBUG-BBOX-MAP] fallback: if bbox mapping fails, fall back to the original prefix matching
-            if door_target is None and target_object is not None:
-                matches = [item for item in all_entities if item.startswith(target_object)]
-                if matches:
-                    door_target = matches[0]
-                    print(f"[DEBUG-BBOX-MAP] open_door fallback to prefix match: {door_target}")
-
-            # When the mapping succeeds, write the matched entity back into the skill record; preferred over the VLM's raw target when matching RRact params
-            if door_target is not None:
-                vlm_skill_seq[-1]['matched_target'] = door_target
-
-            # 1. IoU computation (head camera view, same as place)
-            if door_target is not None and bbox is not None:
-                iou, mask = calculate_mask_bbox_iou(env, door_target, bbox, 5)
-                save_mask(img_dir, step_idx, action, vlm_img_input[5], pts, mask)
-            else:
-                iou = 0
-            if bbox is not None:
+                if place_target is not None:
+                    iou, mask = calculate_mask_bbox_iou(env, place_target, bbox, 5)
+                    save_mask(img_dir, step_idx, action, vlm_img_input[5], pts, mask)
+                else:
+                    iou = 0
                 iou_list.append(iou)
 
-            # 2. Execute: skip the skill when the mapping failed (placeholder, consistent with place)
-            if door_target is None:
-                obs, waypoints, stage_success, task_success = [None], [None], False, False
-            else:
-                obs, waypoint, stage_success, task_success = skill_factory(
-                    target_container_name=door_target)()
+                # Skip skill execution when the target is out of reach
+                target_out_of_reach = is_target_out_of_reach(env, place_target)
+                # handler.target_out_of_reach = target_out_of_reach  # Sync to the handler so history backfill is correct
+                if place_target is None:
+                    obs, waypoints, stage_success, task_success = [None], [None], False, False
+                elif target_out_of_reach:
+                    obs, waypoints, stage_success, task_success = [None], [None], False, False
+                else:
+                    obs, waypoint, stage_success, task_success = skill_factory(
+                        target_container_name=place_target,
+                        placement_th=height,
+                        bbox=bbox)()
 
-        elif action in ["moveforward", "rotate_right", "rotate_left"]:
-            if action == "moveforward":
-                obs, waypoint, stage_success, task_success, movedistance = skill_factory()()
+
+            elif action == "open_door":
+                # [DEBUG-BBOX-MAP] Map the bbox to the container entity name (same entity-level mapping as place;
+                # open_door takes target_container_name, i.e. a key of env.task.entities, not the pick-style body_name)
+                door_target = None
+                if bbox is not None:
+                    door_target = get_entity_from_bbox(
+                        env,
+                        bbox=bbox,
+                        target_entity_name=target_object,
+                        cam_id=5,  # head camera
+                        min_ratio=0.05
+                    )
+
+                    print(f"[DEBUG-BBOX-MAP] open_door bbox={bbox} -> entity={door_target}")
+
+                # Guard: the mapped name must be a key of env.task.entities, otherwise SkillLib.open_door raises KeyError
+                if door_target is not None and door_target not in env.task.entities:
+                    print(f"[DEBUG-BBOX-MAP] open_door mapped entity {door_target} not in env.task.entities, discard")
+                    door_target = None
+
+                # [DEBUG-BBOX-MAP] fallback: if bbox mapping fails, fall back to the original prefix matching
+                if door_target is None and target_object is not None:
+                    matches = [item for item in all_entities if item.startswith(target_object)]
+                    if matches:
+                        door_target = matches[0]
+                        print(f"[DEBUG-BBOX-MAP] open_door fallback to prefix match: {door_target}")
+
+                # When the mapping succeeds, write the matched entity back into the skill record; preferred over the VLM's raw target when matching RRact params
+                if door_target is not None:
+                    vlm_skill_seq[-1]['matched_target'] = door_target
+
+                # 1. IoU computation (head camera view, same as place)
+                if door_target is not None and bbox is not None:
+                    iou, mask = calculate_mask_bbox_iou(env, door_target, bbox, 5)
+                    save_mask(img_dir, step_idx, action, vlm_img_input[5], pts, mask)
+                else:
+                    iou = 0
+                if bbox is not None:
+                    iou_list.append(iou)
+
+                # 2. Execute: skip the skill when the mapping failed (placeholder, consistent with place)
+                if door_target is None:
+                    obs, waypoints, stage_success, task_success = [None], [None], False, False
+                else:
+                    obs, waypoint, stage_success, task_success = skill_factory(
+                        target_container_name=door_target)()
+
+            elif action in ["moveforward", "rotate_right", "rotate_left"]:
+                if action == "moveforward":
+                    obs, waypoint, stage_success, task_success, movedistance = skill_factory()()
+                else:
+                    obs, waypoint, stage_success, task_success = skill_factory()()
+
+                if bbox is not None:
+                    iou, mask = calculate_mask_bbox_iou(env, target_entity, bbox, 5)
+                    iou_list.append(iou)
+
+            elif action in ["look_right", "look_left"]:
+                print("target_object:", target_object)
+                obs, waypoint, stage_success, task_success = skill_factory(
+                    yaw=int(target_object))()
+
+            # =========================================================
+            # [RECALL] recall skill branch:
+            #   - target_object is the "step_x" emitted by the VLM, specifying which historical step to revisit
+            #   - recall does not call env.step and produces no real observations; obs is always the [None] placeholder
+            #   - stage_success indicates whether recall itself completed normally (whether it retrieved the
+            #     trajectory and called the VLM successfully)
+            #   - task_success is always False and does not affect task completion determination
+            #   - keyframes_info holds keyframe info, written into handler.recall_results so that the next
+            #     build_prompt_components round can display it among the historical steps
+            # =========================================================
+            elif action == "recall":
+                obs, waypoint, stage_success, task_success, keyframes_info = skill_factory(
+                    total_observations=total_observations,
+                    step_idx=target_object,
+                )()
+                if keyframes_info is not None:
+                    handler.recall_results[target_object] = keyframes_info
+                else:
+                    logger.warning(f"[RECALL] step={step_idx}: failed to recall target={target_object}, no keyframe info obtained")
+
+            elif action == "rotate_knob":
+                # target_object is the rotation angle in degrees, default 90
+                angle = float(target_object) if target_object is not None else 90
+                obs, waypoint, stage_success, task_success = skill_factory(angle=angle)()
+
+            elif action == "open_sink":
+                # [DEBUG-BBOX-MAP] Map the bbox to the sink entity name (same entity-level mapping as open_door;
+                # open_sink takes target_entity_name, i.e. a key of env.task.entities, not the pick-style body_name)
+                sink_target = None
+                if bbox is not None:
+                    sink_target = get_entity_from_bbox(
+                        env,
+                        bbox=bbox,
+                        target_entity_name=target_object,
+                        cam_id=5,  # head camera
+                        min_ratio=0.05
+                    )
+
+                    print(f"[DEBUG-BBOX-MAP] open_sink bbox={bbox} -> entity={sink_target}")
+
+                # Guard: the mapped name must be a key of env.task.entities and must be a sink entity (with open_direction)
+                if sink_target is not None and sink_target not in env.task.entities:
+                    print(f"[DEBUG-BBOX-MAP] open_sink mapped entity {sink_target} not in env.task.entities, discard")
+                    sink_target = None
+                if sink_target is not None and not hasattr(env.task.entities[sink_target], 'open_direction'):
+                    print(f"[DEBUG-BBOX-MAP] open_sink mapped entity {sink_target} is not a sink (no open_direction), discard")
+                    sink_target = None
+
+                # [DEBUG-BBOX-MAP] fallback 1: scan the scene for the entity with an open_direction attribute (original auto-discovery)
+                if sink_target is None:
+                    for name, entity in env.task.entities.items():
+                        if hasattr(entity, 'open_direction'):
+                            sink_target = name
+                            break
+                    if sink_target is not None:
+                        print(f"[DEBUG-BBOX-MAP] open_sink fallback to open_direction scan: {sink_target}")
+
+                # [DEBUG-BBOX-MAP] fallback 2: prefix matching on the VLM's raw target (same as open_door)
+                if sink_target is None and target_object is not None:
+                    matches = [item for item in all_entities if item.startswith(target_object)]
+                    if matches:
+                        sink_target = matches[0]
+                        print(f"[DEBUG-BBOX-MAP] open_sink fallback to prefix match: {sink_target}")
+
+                # When the mapping succeeds, write the matched entity back into the skill record; preferred over the VLM's raw target when matching RRact params
+                if sink_target is not None:
+                    vlm_skill_seq[-1]['matched_target'] = sink_target
+
+                # 1. IoU computation (head camera view, same as place/open_door)
+                if sink_target is not None and bbox is not None:
+                    iou, mask = calculate_mask_bbox_iou(env, sink_target, bbox, 5)
+                    save_mask(img_dir, step_idx, action, vlm_img_input[5], pts, mask)
+                else:
+                    iou = 0
+                if bbox is not None:
+                    iou_list.append(iou)
+
+                # 2. Execute: skip the skill when no sink entity was found (placeholder, consistent with place/open_door)
+                if sink_target is None:
+                    logger.warning("No Sink entity found for open_sink")
+                    obs, waypoints, stage_success, task_success = [None], [None], False, False
+                else:
+                    obs, waypoint, stage_success, task_success = skill_factory(target_entity_name=sink_target)()
+
+            elif action == "close_sink":
+                # Find the Sink entity in the scene
+                sink_entity_name = None
+                for name, entity in env.task.entities.items():
+                    if hasattr(entity, 'open_direction'):
+                        sink_entity_name = name
+                        break
+                if sink_entity_name is None:
+                    logger.warning(f"No Sink entity found for {action}")
+                    obs, waypoint, stage_success, task_success = [None], [None], False, False
+                else:
+                    obs, waypoint, stage_success, task_success = skill_factory(target_entity_name=sink_entity_name)()
+
+            elif action == "end":
+                obs, waypoint, stage_success, task_success = skill_factory()()
+                if bbox is not None:
+                    iou, mask = calculate_mask_bbox_iou(env, target_entity, bbox, 3)
+                    iou_list.append(iou)
+                rs_tracker.on_skill("end", None)
+                break
+
             else:
                 obs, waypoint, stage_success, task_success = skill_factory()()
 
-            if bbox is not None:
-                iou, mask = calculate_mask_bbox_iou(env, target_entity, bbox, 5)
-                iou_list.append(iou)
+            # RS metric: feed once after the skill actually executes; pick passes the bbox-mapped match (supports the raw "entity/body" string).
+            # Not fed when: not actually executed (obs is the [None] placeholder), pure-query recall, or pick that failed to map to an entity
+            if action != "recall" and not (isinstance(obs, list) and len(obs) == 1 and obs[0] is None):
+                if action != "pick" or match is not None:
+                    rs_tracker.on_skill(action, match if action == "pick" else None)
 
-        elif action in ["look_right", "look_left"]:
-            print("target_object:", target_object)
-            obs, waypoint, stage_success, task_success = skill_factory(
-                yaw=int(target_object))()
+            # Save skill images uniformly
+            if action in ("pick", "place"):
+                save_skill_images(img_dir, step_idx, action, vlm_img_input, bbox=bbox, pts=pts, viz=viz, cam_view=cam_view)
 
-        # =========================================================
-        # [RECALL] recall skill branch:
-        #   - target_object is the "step_x" emitted by the VLM, specifying which historical step to revisit
-        #   - recall does not call env.step and produces no real observations; obs is always the [None] placeholder
-        #   - stage_success indicates whether recall itself completed normally (whether it retrieved the
-        #     trajectory and called the VLM successfully)
-        #   - task_success is always False and does not affect task completion determination
-        #   - keyframes_info holds keyframe info, written into handler.recall_results so that the next
-        #     build_prompt_components round can display it among the historical steps
-        # =========================================================
-        elif action == "recall":
-            obs, waypoint, stage_success, task_success, keyframes_info = skill_factory(
-                total_observations=total_observations,
-                step_idx=target_object,
-            )()
-            if keyframes_info is not None:
-                handler.recall_results[target_object] = keyframes_info
-            else:
-                logger.warning(f"[RECALL] step={step_idx}: failed to recall target={target_object}, no keyframe info obtained")
+            # [RECALL] Maintain total_observations: only non-recall steps have real trajectory observations;
+            # recall's own obs is the [None] placeholder and must not overwrite/pollute total_observations.
+            if action != "recall":
+                total_observations[f"step_{step_idx}"] = obs
 
-        elif action == "rotate_knob":
-            # target_object is the rotation angle in degrees, default 90
-            angle = float(target_object) if target_object is not None else 90
-            obs, waypoint, stage_success, task_success = skill_factory(angle=angle)()
+            # [RECALL] The original logic only accumulated observations when video_dir was not None;
+            # now always executed: recall steps need to insert the [None] placeholder into observations
+            # to keep the step counter n aligned with the observations list (whether or not video is saved).
+            # The recall branch's obs is always [None]; other branches produce real observation lists;
+            # None placeholders are filtered out uniformly before saving the video (see the video saving logic below).
+            observations.extend(obs)
 
-        elif action in ("open_sink", "close_sink"):
-            # Find the Sink entity in the scene
-            sink_entity_name = None
-            for name, entity in env.task.entities.items():
-                if hasattr(entity, 'open_direction'):
-                    sink_entity_name = name
-                    break
-            if sink_entity_name is None:
-                logger.warning(f"No Sink entity found for {action}")
-                obs, waypoint, stage_success, task_success = [None], [None], False, False
-            else:
-                obs, waypoint, stage_success, task_success = skill_factory(target_entity_name=sink_entity_name)()
+            # Check early stop
+            if args.early_stop and not stage_success:
+                logger.info(f"Skill {action} failed, early stopping")
+                break
 
-        elif action == "end":
-            obs, waypoint, stage_success, task_success = skill_factory()()
-            if bbox is not None:
-                iou, mask = calculate_mask_bbox_iou(env, target_entity, bbox, 3)
-                iou_list.append(iou)
-            rs_tracker.on_skill("end", None)
-            break
-
-        else:
-            obs, waypoint, stage_success, task_success = skill_factory()()
-
-        # RS metric: feed once after the skill actually executes; pick passes the bbox-mapped match (supports the raw "entity/body" string).
-        # Not fed when: not actually executed (obs is the [None] placeholder), pure-query recall, or pick that failed to map to an entity
-        if action != "recall" and not (isinstance(obs, list) and len(obs) == 1 and obs[0] is None):
-            if action != "pick" or match is not None:
-                rs_tracker.on_skill(action, match if action == "pick" else None)
-
-        # Save skill images uniformly
-        if action in ("pick", "place"):
-            save_skill_images(img_dir, step_idx, action, vlm_img_input, bbox=bbox, pts=pts, viz=viz, cam_view=cam_view)
-
-        # [RECALL] Maintain total_observations: only non-recall steps have real trajectory observations;
-        # recall's own obs is the [None] placeholder and must not overwrite/pollute total_observations.
-        if action != "recall":
-            total_observations[f"step_{step_idx}"] = obs
-
-        # [RECALL] The original logic only accumulated observations when video_dir was not None;
-        # now always executed: recall steps need to insert the [None] placeholder into observations
-        # to keep the step counter n aligned with the observations list (whether or not video is saved).
-        # The recall branch's obs is always [None]; other branches produce real observation lists;
-        # None placeholders are filtered out uniformly before saving the video (see the video saving logic below).
-        observations.extend(obs)
-
-        # Check early stop
-        if args.early_stop and not stage_success:
-            logger.info(f"Skill {action} failed, early stopping")
-            break
-
-        n -= 1
+            n -= 1
+    except PhysicsError as pe:
+        # Implicit end: the episode is closed out with the progress achieved so far.
+        # The in-flight skill never completed, so it is dropped from vlm_skill_sequence
+        # (equivalent to emitting an early `end` that is NOT recorded as a skill).
+        aborted_skill = vlm_skill_seq[-1]['skill_name'] if vlm_skill_seq else 'unknown'
+        if vlm_skill_seq and vlm_skill_seq[-1].get('step') == step_idx:
+            vlm_skill_seq.pop()
+        result['error'] = f"PhysicsError at step {step_idx} ({aborted_skill}): {pe}"
+        result['aborted_skill_dropped'] = True
+        logger.error(f"[EPISODE-ABORT] PhysicsError aborted skill step {step_idx} ({aborted_skill}): {pe}")
+        # do NOT re-raise: fall through so the guarded metrics section below still
+        # computes everything it can from the pre-divergence progress
+    except Exception as e:  # noqa: BLE001 - any crash is downgraded: fall through so the
+        # guarded metrics section and env.close() below still run on the pre-crash progress.
+        aborted_skill = vlm_skill_seq[-1]['skill_name'] if vlm_skill_seq else 'unknown'
+        if vlm_skill_seq and vlm_skill_seq[-1].get('step') == step_idx:
+            vlm_skill_seq.pop()
+        result['error'] = f"{type(e).__name__} at step {step_idx} ({aborted_skill}): {e}"
+        result['aborted_skill_dropped'] = True
+        logger.error(f"[EPISODE-ABORT] {type(e).__name__} aborted skill step {step_idx} ({aborted_skill}): {e}")
 
     result['vlm_skill_sequence'] = vlm_skill_seq
     result['task_success'] = env.task.task_success if hasattr(env.task, 'task_success') else False
-    result['expert_skill_sequence'] = extract_skill_sequence_from_partials(
-        env.task.get_expert_skill_sequence(env.physics))
+    # Post-abort guard: the physics state may be diverged (NaN) after a PhysicsError, so every
+    # remaining env/physics reader is individually guarded and falls back to neutral values.
+    try:
+        result['expert_skill_sequence'] = extract_skill_sequence_from_partials(
+            env.task.get_expert_skill_sequence(env.physics))
+    except Exception:
+        logger.warning("[EPISODE-ABORT] failed to read expert skill sequence, falling back to []")
+        result['expert_skill_sequence'] = []
     result['task_category'] = task_category if task_category else 'manipulation'
     result['task_type'] = task_type
 
     # Compute completion_rate: actual completion based on conditions
     # score: combined condition score over all leaves; details: per-leaf breakdown (process data stored in result
     # for auditing the CRm/CRn split)
-    score, details = get_leaf_met_progress(env.task.conditions, env.physics)
+    try:
+        score, details = get_leaf_met_progress(env.task.conditions, env.physics)
+    except Exception:
+        logger.warning("[EPISODE-ABORT] condition detection failed, falling back to score=0")
+        score, details = 0.0, {}
 
     # score is not stored separately in result: it duplicates metrics['cr_manipulation'] and can be recomputed from details
     result['condition_leaf_details'] = details
@@ -810,7 +1063,11 @@ def evaluate_single_episode(args, task_name, episode_config, config_idx, logger,
     result['iou_list'] = iou_list
 
     # RS metric settlement: called once at episode end (internally closes out if end was missed); segments kept in result as process data
-    rs_value, rs_segments = rs_tracker.result()
+    try:
+        rs_value, rs_segments = rs_tracker.result()
+    except Exception:
+        logger.warning("[EPISODE-ABORT] RS settlement failed, falling back to rs=0")
+        rs_value, rs_segments = 0.0, []
     result['rs_segments'] = rs_segments
     print(f"[RS] value: {rs_value}")
     for seg in rs_segments:
@@ -841,7 +1098,10 @@ def evaluate_single_episode(args, task_name, episode_config, config_idx, logger,
 
     if result['task_category'] == 'composite_navigation':
         # CRm / CRn / NP: read purely from the env side, independent of skill sequences; cr_manipulation is overwritten by the stratified values
-        metrics.update(compute_crnp(env))
+        try:
+            metrics.update(compute_crnp(env))
+        except Exception:
+            logger.warning("[EPISODE-ABORT] compute_crnp failed, leaving navigation metrics as None")
         # RRact: filter out navigation skills first, then match
         if has_seqs:
             metrics['rr_act'] = compute_rr_act(vlm_seq, expert_seq, task_type, filter_nav=True)
@@ -852,7 +1112,10 @@ def evaluate_single_episode(args, task_name, episode_config, config_idx, logger,
     result['metrics'] = metrics
     print("metrics:", metrics)
 
-    env.close()
+    try:
+        env.close()
+    except Exception:
+        logger.warning("[EPISODE-ABORT] env.close() raised; ignored so the result is still returned/saved")
     end_time = time.time()
     elapsed = end_time - start_time
     hours = int(elapsed // 3600)
@@ -866,9 +1129,8 @@ def evaluate_single_episode(args, task_name, episode_config, config_idx, logger,
     # Save video if video_dir is provided (guard is inside the function)
     save_episode_video(observations, video_dir, task_name, result['task_success'])
 
-    # Record final results
-
-    return result
+    # Record final results (NaN/Inf values anywhere are cleaned to None so json.dump stays valid)
+    return _sanitize_nan(result)
 
 
 def resolve_evaluation_tasks(args):
@@ -966,18 +1228,28 @@ def run_single_episode_worker(work_item, args, base_dir):
     """
     Process-pool worker: run a single episode and return the evaluation result dict.
     Note: each worker rebuilds its own logger (the root logger cannot be serialized across processes).
+
+    Crash tolerance policy:
+      - evaluate_single_episode itself aborts gracefully on PhysicsError (implicit end, skills up to
+        the crash keep counting); any exception that still escapes is caught here and downgraded to a
+        failed result, so both the serial list and the multiprocessing Pool keep going.
+      - A PhysicsError episode earns exactly one clean retry: leftovers are cleared and the episode re-runs.
+      - Every finished episode (success / fail / error) immediately writes result.json for resume.
     """
     logger = get_logger()
 
     task_name = work_item['task_name']
     config_idx = work_item['config_idx']
     save_media = work_item['save_media']
+    task_category = work_item.get('task_category') or 'manipulation'
+    task_type = work_item.get('task_type')
 
     task_dir = os.path.join(base_dir, task_name)
     os.makedirs(task_dir, exist_ok=True)
 
     episode_name = f"{task_name}_episode_{config_idx + 1}"
     task_i_dir = os.path.join(task_dir, episode_name)
+    os.makedirs(task_i_dir, exist_ok=True)
 
     # Only the first episode saves images/video/HTML
     if save_media:
@@ -989,18 +1261,47 @@ def run_single_episode_worker(work_item, args, base_dir):
         video_dir = None
 
     episode_seed = args.seed + config_idx if args.seed is not None else None
+    # task_name in args keeps its CLI/default value when running from an episode config, so
+    # override it with the task actually being evaluated (RUN_META_KEYS includes task_name).
+    run_meta = {**build_run_meta(args), 'task_name': task_name}
 
-    episode_result = evaluate_single_episode(
-        args, task_name, work_item['task_config'], config_idx, logger,
-        seed=episode_seed, video_dir=video_dir, img_dir=img_dir,
-        task_category=work_item['task_category'], task_type=work_item['task_type']
-    )
+    def attempt():
+        try:
+            return evaluate_single_episode(
+                args, task_name, work_item['task_config'], config_idx, logger,
+                seed=episode_seed, video_dir=video_dir, img_dir=img_dir,
+                task_category=task_category, task_type=task_type
+            )
+        except Exception as e:  # noqa: BLE001 - any crash is downgraded, never aborts the whole run
+            logger.error(f"[EPISODE-CRASH] {task_name} episode_{config_idx + 1} died with "
+                         f"{type(e).__name__}: {e}")
+            return _make_failed_result(task_name, config_idx, task_category, task_type, e)
+
+    episode_result = attempt()
+
+    # Physics divergence (mjWARN_BADQACC etc.) earns exactly one clean retry: a fresh VLM rollout
+    # usually follows a different trajectory and no longer diverges.
+    if _is_physics_error(episode_result.get('error')):
+        logger.warning(f"[RETRY] {task_name} episode_{config_idx + 1} hit PhysicsError; "
+                       f"clearing leftovers and retrying once")
+        _clear_dir_contents(task_i_dir)
+        if save_media:
+            os.makedirs(os.path.join(task_i_dir, "img"), exist_ok=True)
+        episode_result = attempt()
+
+    # Incremental per-episode save (single source of truth for --resume-dir detection)
+    _save_episode_result(episode_result, task_i_dir, run_meta)
+    print(f"[EPISODE-SAVED] {task_name} episode_{config_idx + 1} -> "
+          f"{os.path.join(task_i_dir, 'result.json')}")
 
     # Only the first episode generates the debug HTML
     if save_media:
-        html_path = DebugVisualizer().generate(task_i_dir, task_name)
-        if html_path:
-            print(f"  Debug HTML saved to: {html_path}")
+        try:
+            html_path = DebugVisualizer().generate(task_i_dir, task_name)
+            if html_path:
+                print(f"  Debug HTML saved to: {html_path}")
+        except Exception as e:
+            logger.warning(f"Debug HTML generation failed for {task_name}: {e}")
 
     return episode_result
 
@@ -1048,27 +1349,53 @@ def main():
     args = get_args()
     logger = get_logger()
 
-    # 1. Create base_dir: {save_dir}/{vlm_backend}/exp_{MMDD}_{NNN}/
-    #    NNN = the largest existing sequence number for the day + 1, so multiple runs on the same day do not overwrite each other
-    today = datetime.now()
-    month_day = f"{today.month:02d}{today.day:02d}"
+    # 1. Determine base_dir: reuse --resume-dir when given, otherwise create
+    #    {save_dir}/{vlm_backend}/exp_{MMDD}_{NNN}/
+    #    (NNN = the largest existing sequence number for the day + 1, so multiple runs on the same
+    #    day do not overwrite each other)
+    if args.resume_dir:
+        base_dir = os.path.abspath(args.resume_dir)
+        if not os.path.isdir(base_dir):
+            raise SystemExit(f"Error: --resume-dir does not exist or is not a directory: {base_dir}")
+        print(f"[RESUME] Continuing interrupted run in: {base_dir}")
+    else:
+        today = datetime.now()
+        month_day = f"{today.month:02d}{today.day:02d}"
 
-    model_dir = os.path.join(args.save_dir, args.vlm_backend)
-    os.makedirs(model_dir, exist_ok=True)
+        model_dir = os.path.join(args.save_dir, args.vlm_backend)
+        os.makedirs(model_dir, exist_ok=True)
 
-    prefix = f"exp_{month_day}_"
-    existing_nums = [int(d[-3:]) for d in os.listdir(model_dir) if d.startswith(prefix) and d[-3:].isdigit()]
-    exp_str = f"{max(existing_nums, default=0) + 1:03d}"
+        prefix = f"exp_{month_day}_"
+        existing_nums = [int(d[-3:]) for d in os.listdir(model_dir) if d.startswith(prefix) and d[-3:].isdigit()]
+        exp_str = f"{max(existing_nums, default=0) + 1:03d}"
 
-    base_dir = os.path.join(model_dir, f"exp_{month_day}_{exp_str}")
+        base_dir = os.path.join(model_dir, f"exp_{month_day}_{exp_str}")
     os.makedirs(base_dir, exist_ok=True)
 
     # 2. Build the flat work list
     episode_config, task_list = resolve_evaluation_tasks(args)
     work_list = build_work_list(args, episode_config, task_list)
 
+    # 2.5 Resume: load episodes that already have a result.json (strictly matching run config);
+    # clear stale dirs of the rest so the re-run starts clean
+    resumed_results = {}
+    if args.resume_dir:
+        work_list, resumed_results = split_resumed(work_list, base_dir, args)
+        print(f"[RESUME] {len(resumed_results)} finished episode(s) loaded, "
+              f"{len(work_list)} episode(s) to run")
+
     # 3. Run the evaluation (serial or parallel)
     task_results, total_episodes, successful_episodes = run_evaluation(work_list, args, base_dir)
+
+    # 3.5 Merge resumed episodes into the aggregate (same accumulation as run_evaluation)
+    for (res_task, _res_idx), ep_result in resumed_results.items():
+        task_results.setdefault(res_task, {'total_configs': 0, 'evaluated_configs': [], 'success_count': 0})
+        task_results[res_task]['evaluated_configs'].append(ep_result)
+        task_results[res_task]['total_configs'] += 1
+        total_episodes += 1
+        if ep_result.get('task_success', False):
+            successful_episodes += 1
+            task_results[res_task]['success_count'] += 1
 
     # 4. Assemble results & save to disk
     results = {

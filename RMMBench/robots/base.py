@@ -30,7 +30,6 @@ class Robot(composer.Robot):
         self.default_position = self.robot_config.get("position", [])
         self.default_euler = self.robot_config.get("euler", [])
 
-        print("base.py,robot_config:", self.robot_config)
         if robot_config_overide.get("qpos", None) is not None:
             self.default_qpos = robot_config_overide.get("qpos", [])
         else:

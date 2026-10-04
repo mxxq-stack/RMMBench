@@ -6,14 +6,29 @@ from RMMBench.utils.register import register
 from RMMBench.utils.utils import quaternion_to_euler, create_mesh_box, quaternion_to_matrix, \
     compute_rotation_quaternion, normalize
 
+_MOBILE_ACTUATOR_NAMES = ("actuator_mobile_forward",
+                          "actuator_mobile_side",
+                          "actuator_mobile_yaw")
+
 
 @register.add_robot("pandaomron")
 class PandaOmron(MobileSingleArm):
     def __init__(self, **kwargs):
+        fix_base = kwargs.pop("fix_base", False)
         super().__init__(name=kwargs.get("name", "pandaomron"),
                          # n_dof=kwargs.get("n_dof", 7),
                          n_dof=kwargs.get("n_dof", 12),
                          **kwargs)
+        if fix_base:
+            self.lock_base()
+
+    def lock_base(self, ctrl_range=(-1e-6, 1e-6)):
+        for name in _MOBILE_ACTUATOR_NAMES:
+            actuator = self.mjcf_model.find("actuator", name)
+            if actuator is None:
+                continue
+            actuator.ctrllimited = "true"
+            actuator.ctrlrange = ctrl_range
 
     def _add_camera_to_wrist(self, **camera_params):
         name = camera_params.get("name", "wrist_cam")
