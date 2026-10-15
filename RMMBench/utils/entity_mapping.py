@@ -93,8 +93,18 @@ def get_entity_from_bbox(env, bbox, target_entity_name=None, cam_id=3, min_ratio
             ratio = pixel_count / bbox_area
             # Extract the pure body name for matching
             pure_body_name = full_body_name.split("/")[-1] if "/" in full_body_name else full_body_name
-            # Body level: the name-match rule is that target_entity_name is a substring of pure_body_name
-            name_match = (target_entity_name is None or target_entity_name.lower() in pure_body_name.lower())
+            # Body level name-match rule:
+            #   (a) target is a substring of the body name (original rule, e.g. "knob" -> "knob_front_right");
+            #   (b) bidirectional: the body name is a substring of the target (e.g. "fridge_handle"/"sink_handle"
+            #       -> body "handle"). The original one-way rule could never match such prefixed targets, so
+            #       name_match always fell through to a pure-occupancy pick, which resolves to "door"-like bodies
+            #       whose get_grasped_keypoints() returns [] and crashes pick with IndexError.
+            target_lower = target_entity_name.lower() if target_entity_name else ""
+            name_match = (
+                target_entity_name is None
+                or target_entity_name.lower() in pure_body_name.lower()
+                or (target_lower != "" and pure_body_name.lower() in target_lower)
+            )
             candidates.append({
                 "body_name": full_body_name,
                 "pixel_count": pixel_count,

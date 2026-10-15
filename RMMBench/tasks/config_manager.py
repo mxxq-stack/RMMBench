@@ -17,7 +17,7 @@ from RMMBench.utils.utils import flatten_list, grid_sample, find_key_by_value,xm
 # from  RMMBench.utils.robocasa_utils import FixtureStack,get_relative_position,load_style_config,xml_path_completion,check_syntax
 import yaml
 
-from RMMBench.utils.create_task.test_create_workspace_object_pos_orient import get_work_info,layout_objects_with_robot
+from RMMBench.utils.create_task.workspace_object_layout import get_work_info,layout_objects_with_robot
 from RMMBench.tasks.components.robocasa_scene import FIXTURES_CONFIG
 
 
@@ -837,7 +837,7 @@ class NavigationConfigManager(BenchTaskConfigManager):
         :param half_len: half edge length, default 0.1 (edge length 0.2)
         :return: bbox in the form [xmin, ymin, zmin, xmax, ymax, zmax]
         """
-        print("center:",center)
+        # print("center:", center)
         x, y, z = center
         xmin = x - half_len
         ymin = y - half_len
@@ -855,7 +855,7 @@ class NavigationConfigManager(BenchTaskConfigManager):
         target_entity = target_entity or self.target_entity
         dest = self.destination_position
 
-        print(f"current_destination: {dest}")
+        # print(f"current_destination: {dest}")
         if dest is None or not isinstance(target_entity, str):
             return
 
@@ -868,7 +868,7 @@ class NavigationConfigManager(BenchTaskConfigManager):
 
         # 3. Data preparation
         self.target_object_info = copy.deepcopy(component)
-        print(f"target_object_info: {self.target_object_info}")
+        # print(f"target_object_info: {self.target_object_info}")
         pos = self.target_object_info["position"]
 
         # 4. Offset mapping table: {direction: [dx, dy]}
@@ -1181,7 +1181,11 @@ class CompositeNavigationConfigManager(NavigationConfigManager):
             current_layout_points = self.sampled_points[idx] or []
             points_3d = [[x, y, z] for x, y in current_layout_points]
 
-            if self.mid_container_mapping:
+            # Note: the parent may be routed into container_mapping (when it also
+            # appears in seen_container), leaving mid_container_mapping empty.
+            # Enter this branch if EITHER mapping is non-empty, so that children
+            # routed via container_mapping are also excluded from regular objects.
+            if self.mid_container_mapping or self.container_mapping:
                 # Mid_container mode: separate regular objects from mid_container children
                 mid_children = set()
                 for children in self.mid_container_mapping.values():
@@ -1273,7 +1277,7 @@ class CompositeNavigationConfigManager(NavigationConfigManager):
 
             # Use enumerate to iterate over containers together with their index i
             for i, container in enumerate(target_container):
-                print("---------------container:", i, container)
+                # print("---------------container:", i, container)
                 # Key change: if the config table has dedicated parameters for the container at this position, use them; otherwise use the default fallback parameters
                 if i < len(sub_configs):
                     current_container_param = sub_configs[i]
@@ -1399,10 +1403,10 @@ class CompositeNavigationConfigManager(NavigationConfigManager):
         bbox = self.center2bbox(stop_pos)
         self.target_bbox.append(bbox)
 
-        print(f"[Layout {idx}] Auto stop point: pos={stop_pos}, dest='{dest}'")
-        print(f"  workregion: x[{min_x:.3f}, {max_x:.3f}] y[{min_y:.3f}, {max_y:.3f}]")
-        print(f"  target_bbox: {bbox}")
-        print(f"  target_object_info: {self.target_object_info[-1]}")
+        # print(f"[Layout {idx}] Auto stop point: pos={stop_pos}, dest='{dest}'")
+        # print(f"  workregion: x[{min_x:.3f}, {max_x:.3f}] y[{min_y:.3f}, {max_y:.3f}]")
+        # print(f"  target_bbox: {bbox}")
+        # print(f"  target_object_info: {self.target_object_info[-1]}")
 
     def get_condition_config(self, **kwargs):
         """Generate composite conditions with multiple contain_robot targets"""
@@ -1442,10 +1446,10 @@ class CompositeNavigationConfigManager(NavigationConfigManager):
         self.target_object_info.append({"position":pos})
         self.target_bbox.append(self.center2bbox(pos))
 
-        print("self.center_pos:", self.target_object_info)
-        print(f"target_entity_name: {target_entity}")
-        print(f"self.target_object_info[position]: {pos}")
-        print(f"self.target_bbox: {self.target_bbox}")
+        # print("self.center_pos:", self.target_object_info)
+        # print(f"target_entity_name: {target_entity}")
+        # print(f"self.target_object_info[position]: {pos}")
+        # print(f"self.target_bbox: {self.target_bbox}")
 
     def reorder_target_object_info(self):
         """

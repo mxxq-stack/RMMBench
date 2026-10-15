@@ -901,6 +901,57 @@
             }
         }
     },
+      "navigate_to_refrigerator": {
+        "robot": {
+            "position": [
+                2.8,
+                -4,
+                0
+            ],
+            "euler": [
+                0,
+                0,
+                1.57
+            ]
+        },
+        "task": {
+            "random_init": false,
+            "ngrid": [
+                10,
+                10
+            ],
+            "asset": {
+                "composite_configs": [
+                    {
+                        "seen_object": [
+                            "bell_pepper_0",
+                            "juice",
+                            "milk_4"
+                        ],
+                        "mid_container": [
+                            {
+                                "big_fridge": [
+                                    "bell_pepper_0",
+                                    "juice",
+                                    "milk_4"
+                                ]
+                            }
+                        ],
+                        "seen_container": [
+                            "big_fridge"
+                        ],
+                        "fixture_surface": "island_counter_island_group",
+                        "destination_position": "right"
+                    }
+                ],
+                "robocasa_scene": "ONE_WALL_LARGE_0"
+            },
+            "components": [],
+            "scene": {
+                "name": "empty"
+            }
+        }
+    },
     "nav_wash_place": {
         "robot": {
             "position": [
@@ -951,7 +1002,7 @@
     "nav_pick_snacks": {
         "robot": {
             "position": [
-                1.7,
+                3.4,
                 -0.89,
                 0.0
             ],
@@ -966,15 +1017,15 @@
                 "composite_configs": [
                     {
                         "seen_object": [
-                            "chocolate_2",
-                            "chocolate_5",
-                            "chocolate_6"
+                            "boxed_food_0"
+
                         ],
                         "distractor": [
                             "bagged_food_8",
                             "bar_10",
-                            "boxed_food_0",
-                            "chips_7"
+                            "chips_7",
+                            "chocolate_5",
+                            "chocolate_6"
                         ],
                         "fixture_surface": "counter_main_main_group",
                         "destination_position": "bottom"
@@ -1093,9 +1144,7 @@
     "nav_burnt_bread": {
         "robot": {
             "position": [
-                1.7,
-                -0.89,
-                0.0
+                4.75, -4.65, 0.0
             ],
             "euler": [
                 0,
@@ -1109,11 +1158,8 @@
                     {
                         "seen_object": [
                             "bread_21",
-                            "bread_9"
-                        ],
-                        "distractor": [
-                            "bread_7",
-                            "cake_7"
+                            "bread_9",
+                          "cake_7"
                         ],
                         "mid_container": [
                             {
@@ -1123,7 +1169,7 @@
                             }
                         ],
                         "seen_container": [
-                            "tray_7"
+                            "tray_7","plate_0"
                         ],
                         "fixture_surface": "island_counter_island_group",
                         "destination_position": "bottom"
@@ -1150,8 +1196,7 @@
     "nav_store_item_fridge": {
         "robot": {
             "position": [
-                1.7,
-                -0.89,
+                2.2, -0.9000000000000001,
                 0.0
             ],
             "euler": [
@@ -1176,7 +1221,7 @@
                     },
                     {
                         "seen_container": [
-                            "small_fridge"
+                            "small_fridge","tray_3"
                         ],
                         "fixture_surface": "counter_1_front_group",
                         "destination_position": "bottom"

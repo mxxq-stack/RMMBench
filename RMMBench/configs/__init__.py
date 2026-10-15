@@ -61,4 +61,8 @@ name2config = {
         "nav_store_no_sugar_drink_2", "nav_store_no_sugar_drink_3",
     ],
 
+    "navigate_to_refrigerator": [
+        "navigate_to_refrigerator_0", "navigate_to_refrigerator_1", "navigate_to_refrigerator_2",
+    ],
+
 }

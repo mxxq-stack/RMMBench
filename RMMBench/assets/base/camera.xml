@@ -13,7 +13,9 @@
 <!--        <camera name="forward" pos="0 0 0" xyaxes="-1.000 -0.015 -0.000 0.008 -0.551 0.834"/>-->
 
 <!--        <camera name="forward" pos="-0.016 1.223 1.644" xyaxes="-1.000 -0.015 -0.000 0.008 -0.551 0.834"/>-->
-        <camera name="forward" pos="2.7 -5.2 3.7" xyaxes="1.000 0.0 -0 0.00 0.5 0.5" fovy= "80"/>
+
+<!--        <camera name="forward" pos="2.7 -5.2 3.7" xyaxes="1.000 0.0 -0 0.00 0.5 0.5" fovy= "80"/>-->
+            <camera name="forward" pos="2.7 -2 5" xyaxes="1 0 0 0 1 0" fovy="80"/>
 
         <!--        <camera name="back_select_frigde" pos="-0.25 -1 1.641" xyaxes="1.000 -0.015 -0.000 0.008 0.551 0.834" fovy="40"/>-->
 <!--        <camera name="back_select_book" pos="-0.15 -1 2" xyaxes="1.000 -0.015 -0.000 0.008 0.551 0.834" fovy="40"/>-->

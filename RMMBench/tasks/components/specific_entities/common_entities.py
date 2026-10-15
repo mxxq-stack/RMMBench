@@ -23,7 +23,7 @@ class Medicine(LongEntity):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-@register.add_entity("cleaning_supplies")
+@register.add_entity("CleaningSupplies")
 class CleaningSupplies(LongEntity):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

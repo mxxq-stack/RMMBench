@@ -60,6 +60,10 @@ TASK_CLASS = {"manipulation":{
         "nav_store_child_drink_2", "nav_store_child_drink_3",
         "nav_store_no_sugar_drink_0", "nav_store_no_sugar_drink_1",
         "nav_store_no_sugar_drink_2", "nav_store_no_sugar_drink_3",
-    ]
+    ],
+
+    "navigate_to_refrigerator": [
+            "navigate_to_refrigerator_0", "navigate_to_refrigerator_1", "navigate_to_refrigerator_2",
+        ],
     }
 }
