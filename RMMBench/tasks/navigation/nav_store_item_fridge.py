@@ -39,7 +39,9 @@ class NavStoreItemFridgeConfigManager(CompositeNavigationConfigManager):
             {},
             {
                 "configs": [
-                    {"offset": 0.25, "y_set": 0.09, "direction": "left", "z_set": 0}
+                    {"offset": 0.1, "y_set": 0.09, "direction": "left", "z_set": 0},
+                    {"offset": 0.1, "y_set": 0.09, "direction": "right", "z_set": 0}
+
                 ]
             },
         ]
@@ -62,13 +64,20 @@ class NavStoreItemFridgeConfigManager(CompositeNavigationConfigManager):
 
             ),
             dict(
+                # 参考 manipulation 版 store_item_fridge：is_open 必须先于 contain
+                # （once met, always met：开门状态在时序中会被记住，之后关门不影响判定）
+                is_open=dict(
+                    container=f"{self.merged_seen_container[1][0]}",
+                ),
+            ),
+            dict(
                 contain=dict(
                     entities=[self.merged_seen_object[0][0]],
                     container=f"{self.merged_seen_container[1][0]}",
                 )
             ),
         ]
-        conditions_config["ordered_indices"] = [0, 1]
+        conditions_config["ordered_indices"] = [0, 1, 2, 3]
 
         self.target_object_info[0]["target_bbox"] = self.target_bbox[0]
         self.target_object_info[1]["target_bbox"] = self.target_bbox[1]
@@ -84,9 +93,7 @@ class NavStoreItemFridgeTask(CompositeNavigationTask):
 
     def __init__(self, task_name, robot, **kwargs):
         self.attach_objects = [
-            "plate", "sink", "apple", "pear", "peach", "pomegranate",
-            "water_bottle", "boxed_drink", "beer", "wine", "alcohol",
-            "cola", "pepsi", "lemonade", "small_fridge",
+            "plate", "sink", "small_fridge", "tray",
         ]
         super().__init__(task_name, robot=robot, **kwargs)
 
@@ -102,25 +109,54 @@ class NavStoreItemFridgeTask(CompositeNavigationTask):
         if self.config_manager.composite_entities is not None:
             entities = self.config_manager.composite_entities
             for k in entities:
-                entity = self.entities.get(f"{k}", None)
+                entity = self.entities.get(k)
                 if entity is None:
                     continue
                 height = entity.get_placement_height()
-                if "bottle" in k:
+                if "water_bottle_2" in k:
+                    height += 0.035
+                elif "bottle" in k:
                     height += 0.04
-                if height == 0:
+                elif "wine" in k:
+                    height -= 0.03
+                elif "beer" in k:
+                    height -= 0.03
+                elif "alcohol" in k:
+                    height += -0.02
+                elif "milk" in k:
+                    height += -0.01
+                elif "boxed" in k:
+                    height += -0.02
+                elif "pepsi" in k:
+                    height += -0.02
+                elif any(d in k for d in ["cola_1", "lemonade_3"]):
+                    height += 0.03
+                elif height == 0:
                     height += 0.01
                 entity.init_pos[2] += height
 
     def get_expert_skill_sequence(self, physics):
         target_entities = self.config_manager.target_entity[0]
-        target_container_1 = self.config_manager.target_container[1][0]
+        containers_region2 = self.config_manager.target_container[1]
+        fridge = containers_region2[0]
+        # 区域2托盘：单臂机器人先放托盘腾出夹爪开门，再取回放入冰箱
+        tray = containers_region2[1] if len(containers_region2) > 1 else fridge
 
         skill_sequence = []
         for entity in target_entities:
             skill_sequence.extend([
+                # 区域1：拿起目标饮料
                 partial(SkillLib.pick, target_entity_name=entity),
-                partial(SkillLib.place, target_container_name=target_container_1),
+                # 区域2：先把饮料放到托盘上（腾出夹爪）
+                partial(SkillLib.place, target_container_name=tray),
+                partial(SkillLib.observe),
+                # 开冰箱门（参考 manipulation 版：pick(handle) -> open_door）
+                partial(SkillLib.pick, body_name=f"{fridge}/handle"),
+                partial(SkillLib.open_door, target_container_name=fridge),
+                partial(SkillLib.observe),
+                # 从托盘取回饮料，放入冰箱
+                partial(SkillLib.pick, target_entity_name=entity),
+                partial(SkillLib.place, target_container_name=fridge),
                 partial(SkillLib.observe),
             ])
         skill_sequence.extend([partial(SkillLib.end)])
@@ -148,7 +184,7 @@ class NavStoreNonAlcoholicDrink0ConfigManager(NavStoreItemFridgeConfigManager):
                 "destination_position": "bottom",
             },
             {
-                "seen_container": ["small_fridge"],
+                "seen_container": ["small_fridge","tray_7"],
                 "fixture_surface": "counter_1_front_group",
                 "destination_position": "bottom",
             },
@@ -157,7 +193,7 @@ class NavStoreNonAlcoholicDrink0ConfigManager(NavStoreItemFridgeConfigManager):
         self.sampled_points = [None] * len(self.composite_configs)
 
     def get_instruction(self, target_entity, target_container, **kwargs):
-        instruction = ["Help me chill the non-alcoholic option."]
+        instruction = ["I would like a chilled non-alcoholic drink. Navigate to the counter where several drinks are placed, and keep the drink I want chilled in the white mini fridge. If necessary, the tray beside the mini fridge can serve as a temporary intermediate container."]
         self.config["task"]["instructions"] = instruction
         return self.config
 
@@ -185,7 +221,7 @@ class NavStoreNonAlcoholicDrink1ConfigManager(NavStoreItemFridgeConfigManager):
                 "destination_position": "right",
             },
             {
-                "seen_container": ["small_fridge"],
+                "seen_container": ["small_fridge", "tray_7"],
                 "fixture_surface": "counter_1_front_group",
                 "destination_position": "bottom",
             },
@@ -194,7 +230,7 @@ class NavStoreNonAlcoholicDrink1ConfigManager(NavStoreItemFridgeConfigManager):
         self.sampled_points = [None] * len(self.composite_configs)
 
     def get_instruction(self, target_entity, target_container, **kwargs):
-        instruction = ["Help me chill the non-alcoholic option."]
+        instruction = ["I would like a chilled non-alcoholic drink. Navigate to the counter where several drinks are placed, and keep the drink I want chilled in the white mini fridge. If necessary, the tray beside the mini fridge can serve as a temporary intermediate container."]
         self.config["task"]["instructions"] = instruction
         return self.config
 
@@ -231,7 +267,7 @@ class NavStoreChildDrink0ConfigManager(NavStoreItemFridgeConfigManager):
                 "destination_position": "bottom",
             },
             {
-                "seen_container": ["small_fridge"],
+                "seen_container": ["small_fridge", "tray_7"],
                 "fixture_surface": "island_left_group",
                 "destination_position": "bottom",
             },
@@ -268,7 +304,7 @@ class NavStoreChildDrink1ConfigManager(NavStoreItemFridgeConfigManager):
                 "destination_position": "right",
             },
             {
-                "seen_container": ["small_fridge"],
+                "seen_container": ["small_fridge", "tray_7"],
                 "fixture_surface": "island_left_group",
                 "destination_position": "bottom",
             },
@@ -314,7 +350,7 @@ class NavStoreNoSugarDrink0ConfigManager(NavStoreItemFridgeConfigManager):
                 "destination_position": "bottom",
             },
             {
-                "seen_container": ["small_fridge"],
+                "seen_container": ["small_fridge", "tray_7"],
                 "fixture_surface": "island_island_group",
                 "destination_position": "bottom",
             },
@@ -351,7 +387,7 @@ class NavStoreNoSugarDrink1ConfigManager(NavStoreItemFridgeConfigManager):
                 "destination_position": "left",
             },
             {
-                "seen_container": ["small_fridge"],
+                "seen_container": ["small_fridge", "tray_7"],
                 "fixture_surface": "island_island_group",
                 "destination_position": "bottom",
             },
@@ -397,7 +433,7 @@ class NavStoreNonAlcoholicDrink2ConfigManager(NavStoreItemFridgeConfigManager):
                 "destination_position": "bottom",
             },
             {
-                "seen_container": ["small_fridge"],
+                "seen_container": ["small_fridge", "tray_7"],
                 "fixture_surface": "counter_1_left_group",
                 "destination_position": "right",
             },
@@ -434,7 +470,7 @@ class NavStoreNonAlcoholicDrink3ConfigManager(NavStoreItemFridgeConfigManager):
                 "destination_position": "right",
             },
             {
-                "seen_container": ["small_fridge"],
+                "seen_container": ["small_fridge", "tray_7"],
                 "fixture_surface": "counter_main_main_group",
                 "destination_position": "bottom",
             },
@@ -480,7 +516,7 @@ class NavStoreChildDrink2ConfigManager(NavStoreItemFridgeConfigManager):
                 "destination_position": "bottom",
             },
             {
-                "seen_container": ["small_fridge"],
+                "seen_container": ["small_fridge", "tray_7"],
                 "fixture_surface": "counter_1_front_group",
                 "destination_position": "bottom",
             },
@@ -517,7 +553,7 @@ class NavStoreChildDrink3ConfigManager(NavStoreItemFridgeConfigManager):
                 "destination_position": "right",
             },
             {
-                "seen_container": ["small_fridge"],
+                "seen_container": ["small_fridge", "tray_7"],
                 "fixture_surface": "counter_1_front_group",
                 "destination_position": "bottom",
             },
@@ -563,7 +599,7 @@ class NavStoreNoSugarDrink2ConfigManager(NavStoreItemFridgeConfigManager):
                 "destination_position": "bottom",
             },
             {
-                "seen_container": ["small_fridge"],
+                "seen_container": ["small_fridge", "tray_7"],
                 "fixture_surface": "island_counter_island_group",
                 "destination_position": "bottom",
             },
@@ -600,7 +636,7 @@ class NavStoreNoSugarDrink3ConfigManager(NavStoreItemFridgeConfigManager):
                 "destination_position": "bottom",
             },
             {
-                "seen_container": ["small_fridge"],
+                "seen_container": ["small_fridge", "tray_7"],
                 "fixture_surface": "island_counter_island_group",
                 "destination_position": "bottom",
             },

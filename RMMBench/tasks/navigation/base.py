@@ -69,7 +69,7 @@ class CompositeNavigationTask(LM4ManipBaseTask):
                     if k in ["robot"]:
                         specific_condition[k] = self.robot
                         continue
-                    if k in ["container_name","target_bbox", "positions", "target_pos_range","target_orientation"]:
+                    if k in ["container_name","target_bbox", "positions", "target_pos_range","target_orientation","joint_name"]:
                         # Keep these values as-is (data, not entity names)
                         continue
                     if isinstance(entities, str):
@@ -86,7 +86,7 @@ class CompositeNavigationTask(LM4ManipBaseTask):
                 # Track navigation condition for each step
                 if condition_key in ["contain_robot_pose"]:
                     self.navigation_condition = condition
-                    print("@@@@@@@@condition:",condition)
+                    # print("@@@@@@@@condition:",condition)
 
             # Wrap step conditions in ConditionSet (AND logic within each step)
             # print("step_conditions:", step_conditions)

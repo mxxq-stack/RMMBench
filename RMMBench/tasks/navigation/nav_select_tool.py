@@ -32,7 +32,7 @@ class NavSelectToolBaseTask(CompositeNavigationTask):
 
     def __init__(self, task_name, robot, **kwargs):
         self.attach_objects = [
-            "plate", "sink","tray",
+            "plate", "sink", "tray",
             # "apple", "pear", "peach", "pomegranate",
             # "whisk", "spoon", "ladle", "spatula",
             # "bottle_opener", "can_opener", "scissors",
@@ -46,15 +46,6 @@ class NavSelectToolBaseTask(CompositeNavigationTask):
         self.reset_entities_positions()
         self.attach_entities_to_arena()
 
-    def initialize_episode(self, physics, random_state):
-        super().initialize_episode(physics, random_state)
-
-    def attach_entities_to_arena(self):
-        for key, entity in self.entities.items():
-            if any(obj in key for obj in self.attach_objects):
-                entity.detach()
-                self._arena.attach(entity)
-
     def reset_entities_positions(self):
         if self.config_manager.composite_entities is not None:
             entities = self.config_manager.composite_entities
@@ -64,7 +55,7 @@ class NavSelectToolBaseTask(CompositeNavigationTask):
                     continue
                 height = entity.get_placement_height()
                 if height == 0:
-                    height = 0.02
+                    height = 0.005
                 entity.init_pos[2] += height
 
 
@@ -120,7 +111,7 @@ class NavSelectToolGalley0ConfigManager(NavSelectToolBaseConfigManager):
             {},  # Layout 0: no container
             {
                 "configs": [
-                    {"offset": 0.25, "y_set": 0.09, "direction": "left", "z_set": 0.05}
+                    {"offset": 0.3, "y_set": 0.09, "direction": "left", "z_set": 0}
                 ]
             }
         ]
@@ -162,7 +153,7 @@ class NavSelectToolGalley0ConfigManager(NavSelectToolBaseConfigManager):
                 )
             ),
         ]
-        conditions_config["ordered_indices"] = [0, 1]
+        conditions_config["ordered_indices"] = None
 
         self.target_object_info[0]["target_bbox"] = self.target_bbox[0]
         self.target_object_info[0]["target_orientation"] = "left"
@@ -200,7 +191,7 @@ class NavSelectToolGalley0Task(NavSelectToolBaseTask):
             partial(SkillLib.place, target_container_name=target_container_1),
             partial(SkillLib.observe),
         ])
-        # skill_sequence.extend([partial(SkillLib.end)])
+        skill_sequence.extend([partial(SkillLib.end)])
         # skill_sequence = self.remove_second_last(skill_sequence)
         return skill_sequence
 
@@ -253,7 +244,7 @@ class NavSelectToolGalley1ConfigManager(NavSelectToolBaseConfigManager):
             {},
             {
                 "configs": [
-                    {"offset": 0.25, "y_set": 0.09, "direction": "left", "z_set": 0.05}
+                    {"offset": 0.25, "y_set": 0.09, "direction": "left", "z_set": 0}
                 ]
             }
         ]
@@ -295,7 +286,7 @@ class NavSelectToolGalley1ConfigManager(NavSelectToolBaseConfigManager):
                 )
             ),
         ]
-        conditions_config["ordered_indices"] = [0, 1]
+        conditions_config["ordered_indices"] = None
 
         self.target_object_info[0]["target_bbox"] = self.target_bbox[0]
         self.target_object_info[0]["target_orientation"] = "right"
@@ -366,13 +357,13 @@ class NavSelectToolGalley2ConfigManager(NavSelectToolBaseConfigManager):
         self.CONTAINER_CONFIG_TABLE = [
             {
                 "configs": [
-                    {"offset": 0.25, "y_set": 0.09, "direction": "left", "z_set": 0.05}
+                    {"offset": 0.25, "y_set": 0.09, "direction": "left", "z_set": 0}
                 ]
             }
         ]
 
     def get_instruction(self, target_entity, target_container, **kwargs):
-        instruction = ["Choose the appropriate tool based on the canned food beside the tray and place it into the tray."]
+        instruction = ["There are three tools on the table. Help me choose the appropriate tool for the canned food and place it into the tray."]
         self.config["task"]["instructions"] = instruction
         return self.config
 
@@ -397,6 +388,8 @@ class NavSelectToolGalley2ConfigManager(NavSelectToolBaseConfigManager):
                 )
             ),
         ]
+        conditions_config["ordered_indices"] = None
+
         self.target_object_info[0]["target_bbox"] = self.target_bbox[0]
         self.target_object_info[0]["target_orientation"] = "left"
         self.config["task"]["conditions"] = conditions_config
@@ -467,7 +460,7 @@ class NavSelectToolLLarge0ConfigManager(NavSelectToolBaseConfigManager):
                 "grid_size": [8, 8]
             },
             {
-                "workregion_offset": 0.2,
+                "workregion_offset": 0,
                 "workregion_y_set": 0.02,
                 "target_dim": (0.4, 0.4),
                 "grid_size": [6, 6]
@@ -477,7 +470,7 @@ class NavSelectToolLLarge0ConfigManager(NavSelectToolBaseConfigManager):
             {},
             {
                 "configs": [
-                    {"offset": 0.25, "y_set": 0.09, "direction": "left", "z_set": 0.05}
+                    {"offset": 0.25, "y_set": 0.09, "direction": "right", "z_set": 0}
                 ]
             }
         ]
@@ -519,7 +512,7 @@ class NavSelectToolLLarge0ConfigManager(NavSelectToolBaseConfigManager):
                 )
             ),
         ]
-        conditions_config["ordered_indices"] = [0, 1]
+        conditions_config["ordered_indices"] = None
 
         self.target_object_info[0]["target_bbox"] = self.target_bbox[0]
         self.target_object_info[0]["target_orientation"] = "bottom"
@@ -536,6 +529,11 @@ class NavSelectToolLLarge0ConfigManager(NavSelectToolBaseConfigManager):
 class NavSelectToolLLarge0Task(NavSelectToolBaseTask):
     def __init__(self, task_name, robot, **kwargs):
         super().__init__(task_name, robot=robot, **kwargs)
+        self.robot_params = {
+            "pos": [5, -3.5, 3.14],
+            "euler": [0, 0, 0],
+        }
+        self.robot.set_init_pos(**self.robot_params)
 
     def get_expert_skill_sequence(self, physics):
         target_entity = self.config_manager.target_entity
@@ -587,13 +585,13 @@ class NavSelectToolLLarge1ConfigManager(NavSelectToolBaseConfigManager):
 
         self.LAYOUT_CONFIG_TABLE = [
             {
-                "workregion_offset": 0,
+                "workregion_offset": 0.8,
                 "workregion_y_set": 0.1,
                 "target_dim": (0.3, 0.25),
                 "grid_size": [8, 8]
             },
             {
-                "workregion_offset": 0.2,
+                "workregion_offset": -0.3,
                 "workregion_y_set": 0.02,
                 "target_dim": (0.4, 0.4),
                 "grid_size": [6, 6]
@@ -603,7 +601,7 @@ class NavSelectToolLLarge1ConfigManager(NavSelectToolBaseConfigManager):
             {},
             {
                 "configs": [
-                    {"offset": 0.25, "y_set": 0.09, "direction": "left", "z_set": 0.05}
+                    {"offset": 0.15, "y_set": 0.09, "direction": "left", "z_set": 0}
                 ]
             }
         ]
@@ -645,7 +643,7 @@ class NavSelectToolLLarge1ConfigManager(NavSelectToolBaseConfigManager):
                 )
             ),
         ]
-        conditions_config["ordered_indices"] = [0, 1]
+        conditions_config["ordered_indices"] = None
 
         self.target_object_info[0]["target_bbox"] = self.target_bbox[0]
         self.target_object_info[0]["target_orientation"] = "right"
@@ -663,7 +661,7 @@ class NavSelectToolLLarge1Task(NavSelectToolBaseTask):
     def __init__(self, task_name, robot, **kwargs):
         super().__init__(task_name, robot=robot, **kwargs)
         self.robot_params = {
-            "pos": [3.5, -3.5, 0.0],
+            "pos": [5, -3.5, 3.14],
             "euler": [0, 0, 0],
         }
         self.robot.set_init_pos(**self.robot_params)
@@ -721,13 +719,13 @@ class NavSelectToolLLarge2ConfigManager(NavSelectToolBaseConfigManager):
         self.CONTAINER_CONFIG_TABLE = [
             {
                 "configs": [
-                    {"offset": 0.25, "y_set": 0.09, "direction": "left", "z_set": 0.05}
+                    {"offset": 0.25, "y_set": 0.09, "direction": "left", "z_set": 0}
                 ]
             }
         ]
 
     def get_instruction(self, target_entity, target_container, **kwargs):
-        instruction = ["Choose the appropriate tool based on the canned food beside the tray and place it into the tray."]
+        instruction = ["There are three tools on the table. Help me choose the appropriate tool for the canned food and place it into the tray."]
         self.config["task"]["instructions"] = instruction
         return self.config
 
@@ -752,6 +750,8 @@ class NavSelectToolLLarge2ConfigManager(NavSelectToolBaseConfigManager):
                 )
             ),
         ]
+        conditions_config["ordered_indices"] = None
+
         self.target_object_info[0]["target_bbox"] = self.target_bbox[0]
         self.target_object_info[0]["target_orientation"] = "top"
         self.config["task"]["conditions"] = conditions_config
@@ -762,8 +762,8 @@ class NavSelectToolLLarge2Task(NavSelectToolBaseTask):
     def __init__(self, task_name, robot, **kwargs):
         super().__init__(task_name, robot=robot, **kwargs)
         self.robot_params = {
-            "pos": [3.5, -3.5, 0.0],
-            "euler": [0, 0, 1.57],
+            "pos": [5, -3.5, 4],
+            "euler": [0, 0, 3.14],
         }
         self.robot.set_init_pos(**self.robot_params)
 
@@ -811,7 +811,7 @@ class NavSelectToolLSmall0ConfigManager(NavSelectToolBaseConfigManager):
             },
             {
                 "seen_object": ["egg_10"],
-                "seen_container": ["tray_3"],
+                "seen_container": ["tray_7"],
                 "fixture_surface": "counter_2_right_group",
                 "destination_position": "left"
             }
@@ -821,7 +821,7 @@ class NavSelectToolLSmall0ConfigManager(NavSelectToolBaseConfigManager):
 
         self.LAYOUT_CONFIG_TABLE = [
             {
-                "workregion_offset": 0.5,
+                "workregion_offset": 0.8,
                 "workregion_y_set": 0.1,
                 "target_dim": (0.3, 0.25),
                 "grid_size": [8, 8]
@@ -837,7 +837,7 @@ class NavSelectToolLSmall0ConfigManager(NavSelectToolBaseConfigManager):
             {},
             {
                 "configs": [
-                    {"offset": 0.25, "y_set": 0.09, "direction": "left", "z_set": 0.05}
+                    {"offset": 0.25, "y_set": 0.09, "direction": "left", "z_set": 0}
                 ]
             }
         ]
@@ -879,7 +879,7 @@ class NavSelectToolLSmall0ConfigManager(NavSelectToolBaseConfigManager):
                 )
             ),
         ]
-        conditions_config["ordered_indices"] = [0, 1]
+        conditions_config["ordered_indices"] = None
 
         self.target_object_info[0]["target_bbox"] = self.target_bbox[0]
         self.target_object_info[0]["target_orientation"] = "bottom"
@@ -896,6 +896,18 @@ class NavSelectToolLSmall0ConfigManager(NavSelectToolBaseConfigManager):
 class NavSelectToolLSmall0Task(NavSelectToolBaseTask):
     def __init__(self, task_name, robot, **kwargs):
         super().__init__(task_name, robot=robot, **kwargs)
+
+    def reset_entities_positions(self):
+        if self.config_manager.composite_entities is not None:
+            entities = self.config_manager.composite_entities
+            for k in entities:
+                entity = self.entities.get(f"{k}", None)
+                if entity is None:
+                    continue
+                height = entity.get_placement_height()
+                if height == 0:
+                    height = 0.02
+                entity.init_pos[2] += height
 
     def get_expert_skill_sequence(self, physics):
         target_entity = self.config_manager.target_entity
@@ -931,7 +943,7 @@ class NavSelectToolLSmall1ConfigManager(NavSelectToolBaseConfigManager):
             {
                 "seen_object": ["bottle_opener_5"],
                 "distractor": ["can_opener_2", "scissors_1"],
-                "seen_container": ["tray_3"],
+                "seen_container": ["tray_7"],
                 "fixture_surface": "counter_main_main_group",
                 "destination_position": "bottom"
             }
@@ -942,21 +954,21 @@ class NavSelectToolLSmall1ConfigManager(NavSelectToolBaseConfigManager):
         self.LAYOUT_CONFIG_TABLE = [
             {
                 "workregion_offset": 0,
-                "workregion_y_set": 0.1,
-                "target_dim": (0.3, 0.25),
-                "grid_size": [8, 8]
+                "workregion_y_set": 0.02,
+                "target_dim": (0.35, 0.3),
+                "grid_size": [2, 2]
             }
         ]
         self.CONTAINER_CONFIG_TABLE = [
             {
                 "configs": [
-                    {"offset": 0.25, "y_set": 0.09, "direction": "left", "z_set": 0.05}
+                    {"offset": 0.3, "y_set": 0.09, "direction": "left", "z_set": 0}
                 ]
             }
         ]
 
     def get_instruction(self, target_entity, target_container, **kwargs):
-        instruction = ["Choose the appropriate tool based on the beer beside the tray and place it into the tray."]
+        instruction = ["There are three tools on the table. Help me choose the appropriate tool for the beer and place it into the tray."]
         self.config["task"]["instructions"] = instruction
         return self.config
 
@@ -981,6 +993,8 @@ class NavSelectToolLSmall1ConfigManager(NavSelectToolBaseConfigManager):
                 )
             ),
         ]
+        conditions_config["ordered_indices"] = None
+
         self.target_object_info[0]["target_bbox"] = self.target_bbox[0]
         self.target_object_info[0]["target_orientation"] = "bottom"
         self.config["task"]["conditions"] = conditions_config
@@ -990,6 +1004,18 @@ class NavSelectToolLSmall1ConfigManager(NavSelectToolBaseConfigManager):
 class NavSelectToolLSmall1Task(NavSelectToolBaseTask):
     def __init__(self, task_name, robot, **kwargs):
         super().__init__(task_name, robot=robot, **kwargs)
+
+    def reset_entities_positions(self):
+        if self.config_manager.composite_entities is not None:
+            entities = self.config_manager.composite_entities
+            for k in entities:
+                entity = self.entities.get(f"{k}", None)
+                if entity is None:
+                    continue
+                height = entity.get_placement_height()
+                if height == 0:
+                    height = 0.005
+                entity.init_pos[2] += height
 
     def get_expert_skill_sequence(self, physics):
         target_entity = self.config_manager.target_entity
@@ -1044,13 +1070,13 @@ class NavSelectToolLSmall2ConfigManager(NavSelectToolBaseConfigManager):
         self.CONTAINER_CONFIG_TABLE = [
             {
                 "configs": [
-                    {"offset": 0.25, "y_set": 0.09, "direction": "left", "z_set": 0.05}
+                    {"offset": 0.25, "y_set": 0.09, "direction": "left", "z_set": 0}
                 ]
             }
         ]
 
     def get_instruction(self, target_entity, target_container, **kwargs):
-        instruction = ["Choose the appropriate tool based on the canned food beside the tray and place it into the tray."]
+        instruction = ["There are three tools on the table. Help me choose the appropriate tool for the canned food and place it into the tray."]
         self.config["task"]["instructions"] = instruction
         return self.config
 
@@ -1075,6 +1101,8 @@ class NavSelectToolLSmall2ConfigManager(NavSelectToolBaseConfigManager):
                 )
             ),
         ]
+        conditions_config["ordered_indices"] = None
+
         self.target_object_info[0]["target_bbox"] = self.target_bbox[0]
         self.target_object_info[0]["target_orientation"] = "left"
         self.config["task"]["conditions"] = conditions_config

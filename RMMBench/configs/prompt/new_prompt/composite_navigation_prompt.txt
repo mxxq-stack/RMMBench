@@ -26,7 +26,7 @@ MANIPULATION ACTIONS:
 - close_gripper: Close the gripper.
 - open_gripper: Open the gripper.
 - observe: Reset the end-effector to the default position for a clear view.
-- open_door: Open the door after grasping the handle.
+- open_door: Open the door after grasping the handle. Only for door containers (fridge, cabinet; not applicable to drawers/counters).
 - close_door: Close the door.
 - recall <step_x>: Review the key frames of a previous step (e.g. step_0) if you are unsure whether it succeeded.
 - end: Task completed.

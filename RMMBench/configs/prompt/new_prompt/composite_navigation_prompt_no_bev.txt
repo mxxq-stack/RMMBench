@@ -20,16 +20,20 @@ MANIPULATION ACTIONS:
 - pick <object>: Move end effector to grasp the target object and close the gripper.
 - place to <container>: Move end effector to the target container and open the gripper to place.
 - lift: Lift the end effector vertically.
+- pull: withdraw the hand horizontally while keeping the gripper state unchanged.
+- push: move the end effector inward while keeping the gripper state unchanged.
 - observe: Reset the end-effector to the default home position for a clear view and stable robot state.
-- open_door: Open the door. Requires the handle to be already grasped; does not include grasping.
+- open_door <container>: with the door handle already grasped, swing the door open along an arc around the door axis, then release the handle. Only for door containers (fridge, cabinet; not applicable to drawers/counters). When executing, output the bounding box of the entire target container in the head camera image.
+- open_sink <sink>: with the faucet handle already grasped, lift the handle vertically to turn on the water flow. When executing, output the bounding box of the entire sink in the head camera image.
+- rotate_knob: rotate the gripper without changing the current grasp position, usually used to turn a knob.
 - close_door: Close the door. Automatically moves the end effector to the open door and performs the closing motion.
 - recall <step_x>: Review the key frames of a previous step (e.g. step_0) if you are unsure whether it succeeded.
 - end: Task completed.
 
 
 OUTPUT RULES AND FORMAT:
-for every step, you must provide your decision and reasoning. the 2d bounding box [ymin, xmin, ymax, xmax] (normalized 0-1000) is required only for pick and place actions.
-for pick, target the functional grasping area of the object (e.g., handle, knob, or body center), avoiding non-graspable protrusions. for place, target the interior or intended receiving region of the container, excluding handles, spouts, or other non-receiving parts.
+for every step, you must provide your decision and reasoning. the 2d bounding box [ymin, xmin, ymax, xmax] (normalized 0-1000) is required for pick, place, open_door, and open_sink actions.
+for pick, target the functional grasping area of the object (e.g., handle, knob, or body center), avoiding non-graspable protrusions. for place, target the interior or intended receiving region of the container, excluding handles, spouts, or other non-receiving parts. for open_door, output the bounding box of the entire target container in the head camera image. for open_sink, output the bounding box of the entire sink in the head camera image.
 
 your output must strictly follow these formats:
 
@@ -37,13 +41,23 @@ action: <action_name>
 reasoning: your reasoning
 
 - for pick action:
-action: pick <object>
+action: pick <object|knob|handle>
 cam_view: <wrist|head>
 box_2d: [ymin, xmin, ymax, xmax]
 reasoning: your reasoning
 
 - for place action:
 action: place to <container>
+box_2d: [ymin, xmin, ymax, xmax]
+reasoning: your reasoning
+
+- for open_door action:
+action: open_door <container>
+box_2d: [ymin, xmin, ymax, xmax]
+reasoning: your reasoning
+
+- for open_sink action:
+action: open_sink <sink>
 box_2d: [ymin, xmin, ymax, xmax]
 reasoning: your reasoning
 
@@ -63,6 +77,17 @@ reasoning: your reasoning
 
 action: place to plate
 box_2d: [200, 150, 400, 350]
+reasoning: your reasoning
+
+action: open_door fridge
+box_2d: [200, 150, 400, 350]
+reasoning: your reasoning
+
+action: open_sink sink
+box_2d: [250, 200, 450, 400]
+reasoning: your reasoning
+
+action: rotate_knob
 reasoning: your reasoning
 
 

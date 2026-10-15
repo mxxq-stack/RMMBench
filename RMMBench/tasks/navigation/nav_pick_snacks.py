@@ -68,7 +68,7 @@ class NavPickChocolate0ConfigManager(NavPickSnacksBaseConfigManager):
     Layout 1: counter_1_left_group (right) - place on plate
     """
 
-    def __init__(self, task_name, num_objects=[[4, 1], [0, 1]], **kwargs):
+    def __init__(self, task_name, num_objects=[[3, 1], [0, 1]], **kwargs):
         super().__init__(task_name, num_objects, **kwargs)
         self.LAYOUT_CONFIG_TABLE = [
             {
@@ -78,7 +78,7 @@ class NavPickChocolate0ConfigManager(NavPickSnacksBaseConfigManager):
                 "grid_size": [6, 6]
             },
             {
-                "workregion_offset": -0.35,
+                "workregion_offset": 0.35,
                 "workregion_y_set": 0.1,
                 "target_dim": (0.3, 0.25),
                 "grid_size": [6, 6]
@@ -88,24 +88,15 @@ class NavPickChocolate0ConfigManager(NavPickSnacksBaseConfigManager):
             {},  # Layout 0: no container
             {
                 "configs": [
-                    {"offset": -0.1, "y_set": 0.1, "direction": "right", "z_set": 0.01},
+                    {"offset": 0.1, "y_set": 0.1, "direction": "left", "z_set": -0.01},
                 ]
             }
         ]
 
-    def load_objects_for_layout(self, idx):
-        super().load_objects_for_layout(idx)
-        if idx == 0:
-            pos = [1.075, -2.65, 0]
-            self.target_object_info.append({"position": pos})
-            self.target_bbox.append(self.center2bbox(pos))
-        elif idx == 1:
-            pos = [2.15, -1.68, 0]
-            self.target_object_info.append({"position": pos})
-            self.target_bbox.append(self.center2bbox(pos))
+
 
     def get_instruction(self, target_entity, target_container, **kwargs):
-        instruction = ["Navigate to pick the chocolate, then go to the counter to place it on the plate."]
+        instruction = ["Navigate to pick the red boxed food, then go to the table to place it on the plate."]#导航到红色盒装零食除，将盒装零食放到水槽边的盘子中
         self.config["task"]["instructions"] = instruction
         return self.config
 
@@ -134,8 +125,14 @@ class NavPickChocolate0ConfigManager(NavPickSnacksBaseConfigManager):
                     robot="pandaomron"
                 )
             ),
+            dict(
+                contain=dict(
+                    entities=[self.merged_seen_object[0][0]],
+                    container=f"{self.merged_seen_container[1][0]}",
+                )
+            ),
         ]
-        conditions_config["ordered_indices"] = [0, 1]
+        conditions_config["ordered_indices"] = None
 
         self.target_object_info[0]["target_bbox"] = self.target_bbox[0]
         self.target_object_info[0]["target_orientation"] = "bottom"
@@ -152,20 +149,33 @@ class NavPickChocolate0ConfigManager(NavPickSnacksBaseConfigManager):
 class NavPickChocolate0Task(NavPickSnacksBaseTask):
     def __init__(self, task_name, robot, **kwargs):
         self.attach_objects = [
-            "plate", "chocolate", "bagged_food", "bar", "boxed_food", "chips",
+            "plate",
+            # "chocolate", "bagged_food", "bar", "boxed_food", "chips",
         ]
         super().__init__(task_name, robot=robot, **kwargs)
 
     def get_expert_skill_sequence(self, physics):
+        target_entity = self.config_manager.target_entity
+        target_container = self.config_manager.target_container
+        target_entities = target_entity[0]
+        target_container_1 = target_container[1][0]
+
         skill_sequence = [
+            # navigate to layout 0 (pick area)
             partial(SkillLib.moveforward),
             partial(SkillLib.moveforward),
             partial(SkillLib.rotate_left),
             partial(SkillLib.moveforward),
             partial(SkillLib.moveforward),
+            # pick the snack
+            partial(SkillLib.pick, target_entity_name=target_entities[0]),
+            # navigate to layout 1 (place area)
             partial(SkillLib.rotate_right),
             partial(SkillLib.moveforward),
             partial(SkillLib.moveforward),
+            # place on the plate and finish
+            partial(SkillLib.place, target_container_name=target_container_1),
+            partial(SkillLib.observe),
             partial(SkillLib.end),
         ]
         return skill_sequence
@@ -185,15 +195,15 @@ class NavPickChocolate1ConfigManager(NavPickChocolate0ConfigManager):
         super().__init__(task_name, num_objects, **kwargs)
         self.composite_configs = [
             {
-                "seen_object": ["chocolate_2", "chocolate_5", "chocolate_6"],
-                "distractor": ["bagged_food_8", "bar_10", "boxed_food_0", "chips_7"],
+                "seen_object": ["boxed_food_0"],
+                "distractor": ["bagged_food_8", "bar_10", "chips_7", "chocolate_5", "chocolate_6"],
                 "fixture_surface": "counter_main_main_group",
                 "destination_position": "bottom"
             },
             {
                 "seen_container": ["plate_2"],
                 "fixture_surface": "counter_1_front_group",
-                "destination_position": "right"
+                "destination_position": "bottom"
             }
         ]
         self.robocasa_scene = "G_SHAPED_LARGE_3"
@@ -210,28 +220,67 @@ class NavPickChocolate1ConfigManager(NavPickChocolate0ConfigManager):
                 "grid_size": [6, 6]
             },
             {
-                "workregion_offset": 0,
+                "workregion_offset": 1.55,
                 "workregion_y_set": 0.1,
                 "target_dim": (0.3, 0.25),
                 "grid_size": [6, 6]
             }
         ]
 
-    def load_objects_for_layout(self, idx):
-        super().load_objects_for_layout(idx)
-        if idx == 0:
-            pos = [0.75, -2.2, 0]
-            self.target_object_info.append({"position": pos})
-            self.target_bbox.append(self.center2bbox(pos))
-        elif idx == 1:
-            pos = [2.15, -1.68, 0]
-            self.target_object_info.append({"position": pos})
-            self.target_bbox.append(self.center2bbox(pos))
+        self.CONTAINER_CONFIG_TABLE = [
+            {},  # Layout 0: no container
+            {
+                "configs": [
+                    {"offset": -0.1, "y_set": 0, "direction": "left", "z_set": -0.02},
+                ]
+            }
+        ]
 
     def get_instruction(self, target_entity, target_container, **kwargs):
-        instruction = ["Navigate to pick the chocolate from the main counter, then go around the island to place it on the plate."]
+        instruction = ["Navigate to pick the red boxed food from the main table, then go around the island to place it on the plate."]#。。。（前边和_0一致），放到红色盘子中
         self.config["task"]["instructions"] = instruction
         return self.config
+
+    def get_condition_config(self, **kwargs):
+        conditions_config = dict()
+        conditions_config["asyn_sequence"] = [
+            dict(
+                contain_robot_pose=dict(
+                    target_bbox=self.target_bbox[0],
+                    robot="pandaomron"
+                ),
+                robot_orientation=dict(
+                    target_orientation="bottom",
+                    target_bbox=self.target_bbox[0],
+                    robot="pandaomron"
+                )
+            ),
+            dict(
+                contain_robot_pose=dict(
+                    target_bbox=self.target_bbox[1],
+                    robot="pandaomron"
+                ),
+                robot_orientation=dict(
+                    target_orientation="bottom",
+                    target_bbox=self.target_bbox[1],
+                    robot="pandaomron"
+                )
+            ),
+            dict(
+                contain=dict(
+                    entities=[self.merged_seen_object[0][0]],
+                    container=f"{self.merged_seen_container[1][0]}",
+                )
+            ),
+        ]
+        conditions_config["ordered_indices"] = None
+
+        self.target_object_info[0]["target_bbox"] = self.target_bbox[0]
+        self.target_object_info[0]["target_orientation"] = "bottom"
+        self.target_object_info[1]["target_bbox"] = self.target_bbox[1]
+        self.target_object_info[1]["target_orientation"] = "bottom"
+
+        self.config["task"]["conditions"] = conditions_config
 
 
 @register.add_task("nav_pick_chocolate_1")
@@ -258,10 +307,10 @@ class NavPickChocolate2ConfigManager(NavPickChocolate0ConfigManager):
         super().__init__(task_name, num_objects, **kwargs)
         self.composite_configs = [
             {
-                "seen_object": ["chocolate_2", "chocolate_5", "chocolate_6"],
-                "distractor": ["bagged_food_8", "bar_10", "boxed_food_0", "chips_7"],
+                "seen_object": ["boxed_food_0"],
+                "distractor": ["bagged_food_8", "bar_10", "chips_7", "chocolate_5", "chocolate_6"],
                 "seen_container": ["plate_2"],
-                "fixture_surface": "counter_1_front_group",
+                "fixture_surface": "counter_1_left_group",
                 "destination_position": "right"
             }
         ]
@@ -273,7 +322,7 @@ class NavPickChocolate2ConfigManager(NavPickChocolate0ConfigManager):
 
         self.LAYOUT_CONFIG_TABLE = [
             {
-                "workregion_offset": -0,
+                "workregion_offset": 1.1,
                 "workregion_y_set": 0.1,
                 "target_dim": (0.3, 0.25),
                 "grid_size": [6, 6]
@@ -282,20 +331,13 @@ class NavPickChocolate2ConfigManager(NavPickChocolate0ConfigManager):
         self.CONTAINER_CONFIG_TABLE = [
             {
                 "configs": [
-                    {"offset": 0.16, "y_set": -0.05, "direction": "right", "z_set": 0}
+                    {"offset": 0.3, "y_set": -0.05, "direction": "right", "z_set": -0.02}
                 ]
             }
         ]
 
-    def load_objects_for_layout(self, idx):
-        super().load_objects_for_layout(idx)
-        if idx == 0:
-            pos = [2.15, -1.68, 0]
-            self.target_object_info.append({"position": pos})
-            self.target_bbox.append(self.center2bbox(pos))
-
     def get_instruction(self, target_entity, target_container, **kwargs):
-        instruction = ["Navigate to the counter to pick the chocolate and place it on the plate."]
+        instruction = ["Navigate to the table to pick the red boxed food and place it on the plate."]
         self.config["task"]["instructions"] = instruction
         return self.config
 
@@ -313,7 +355,15 @@ class NavPickChocolate2ConfigManager(NavPickChocolate0ConfigManager):
                     robot="pandaomron"
                 )
             ),
+            dict(
+                contain=dict(
+                    entities=[self.merged_seen_object[0][0]],
+                    container=f"{self.merged_seen_container[0][0]}",
+                )
+            ),
         ]
+        conditions_config["ordered_indices"] = None
+
         self.target_object_info[0]["target_bbox"] = self.target_bbox[0]
         self.target_object_info[0]["target_orientation"] = "right"
         self.config["task"]["conditions"] = conditions_config
@@ -329,6 +379,27 @@ class NavPickChocolate2Task(NavPickChocolate0Task):
         }
         self.robot.set_init_pos(**self.robot_params)
 
+    def get_expert_skill_sequence(self, physics):
+        target_entity = self.config_manager.target_entity
+        target_container = self.config_manager.target_container
+        target_entities = target_entity[0]
+        target_container_0 = target_container[0][0]
+
+        skill_sequence = [
+            # navigate to the single work area
+            partial(SkillLib.moveforward),
+            partial(SkillLib.moveforward),
+            partial(SkillLib.rotate_left),
+            partial(SkillLib.moveforward),
+            partial(SkillLib.moveforward),
+            # pick the snack, place on the plate and finish
+            partial(SkillLib.pick, target_entity_name=target_entities[0]),
+            partial(SkillLib.place, target_container_name=target_container_0),
+            partial(SkillLib.observe),
+            partial(SkillLib.end),
+        ]
+        return skill_sequence
+
 
 @register.add_config_manager("nav_pick_chocolate_3")
 class NavPickChocolate3ConfigManager(NavPickChocolate2ConfigManager):
@@ -343,8 +414,8 @@ class NavPickChocolate3ConfigManager(NavPickChocolate2ConfigManager):
         super().__init__(task_name, num_objects, **kwargs)
         self.composite_configs = [
             {
-                "seen_object": ["chocolate_2", "chocolate_5", "chocolate_6"],
-                "distractor": ["bagged_food_8", "bar_10", "boxed_food_0", "chips_7"],
+                "seen_object": ["boxed_food_0"],
+                "distractor": ["bagged_food_8", "bar_10", "chips_7", "chocolate_5", "chocolate_6"],
                 "seen_container": ["plate_2"],
                 "fixture_surface": "counter_1_front_group",
                 "destination_position": "right"
@@ -358,7 +429,7 @@ class NavPickChocolate3ConfigManager(NavPickChocolate2ConfigManager):
             raise ValueError(f"Composite navigation task {task_name} requires 'composite_configs'")
 
     def get_instruction(self, target_entity, target_container, **kwargs):
-        instruction = ["Navigate to the counter to pick the chocolate and place it on the plate."]
+        instruction = ["Navigate to the counter to pick the boxed food and place it on the plate."]
         self.config["task"]["instructions"] = instruction
         return self.config
 
@@ -390,6 +461,21 @@ class NavPickChip0ConfigManager(NavPickSnacksBaseConfigManager):
 
     def __init__(self, task_name, num_objects=[[4, 1], [0, 1]], **kwargs):
         super().__init__(task_name, num_objects, **kwargs)
+        self.composite_configs = [
+            {
+                "seen_object": ["chips_13", "chips_14", "chips_6"],
+                "distractor": ["bagged_food_8", "bar_10", "boxed_food_0", "chocolate_5", "chocolate_6"],
+                "fixture_surface": "counter_main_main_group",
+                "destination_position": "bottom"
+            },
+            {
+                "seen_container": ["plate_2"],
+                "fixture_surface": "counter_1_left_group",
+                "destination_position": "right"
+            }
+        ]
+        self.work_info = [None] * len(self.composite_configs)
+        self.sampled_points = [None] * len(self.composite_configs)
         self.LAYOUT_CONFIG_TABLE = [
             {
                 "workregion_offset": 0,
@@ -412,17 +498,6 @@ class NavPickChip0ConfigManager(NavPickSnacksBaseConfigManager):
                 ]
             }
         ]
-
-    def load_objects_for_layout(self, idx):
-        super().load_objects_for_layout(idx)
-        if idx == 0:
-            pos = [1.075, -2.65, 0]
-            self.target_object_info.append({"position": pos})
-            self.target_bbox.append(self.center2bbox(pos))
-        elif idx == 1:
-            pos = [2.15, -1.68, 0]
-            self.target_object_info.append({"position": pos})
-            self.target_bbox.append(self.center2bbox(pos))
 
     def get_instruction(self, target_entity, target_container, **kwargs):
         instruction = ["Navigate to pick the chips, then go to the counter to place them on the plate."]
@@ -454,8 +529,14 @@ class NavPickChip0ConfigManager(NavPickSnacksBaseConfigManager):
                     robot="pandaomron"
                 )
             ),
+            dict(
+                contain=dict(
+                    entities=[self.merged_seen_object[0][0]],
+                    container=f"{self.merged_seen_container[1][0]}",
+                )
+            ),
         ]
-        conditions_config["ordered_indices"] = [0, 1]
+        conditions_config["ordered_indices"] = None
 
         self.target_object_info[0]["target_bbox"] = self.target_bbox[0]
         self.target_object_info[0]["target_orientation"] = "bottom"
@@ -482,15 +563,27 @@ class NavPickChip0Task(NavPickSnacksBaseTask):
         self.robot.set_init_pos(**self.robot_params)
 
     def get_expert_skill_sequence(self, physics):
+        target_entity = self.config_manager.target_entity
+        target_container = self.config_manager.target_container
+        target_entities = target_entity[0]
+        target_container_1 = target_container[1][0]
+
         skill_sequence = [
+            # navigate to layout 0 (pick area)
             partial(SkillLib.moveforward),
             partial(SkillLib.moveforward),
             partial(SkillLib.rotate_left),
             partial(SkillLib.moveforward),
             partial(SkillLib.moveforward),
+            # pick the snack
+            partial(SkillLib.pick, target_entity_name=target_entities[0]),
+            # navigate to layout 1 (place area)
             partial(SkillLib.rotate_right),
             partial(SkillLib.moveforward),
             partial(SkillLib.moveforward),
+            # place on the plate and finish
+            partial(SkillLib.place, target_container_name=target_container_1),
+            partial(SkillLib.observe),
             partial(SkillLib.end),
         ]
         return skill_sequence
@@ -541,17 +634,6 @@ class NavPickChip1ConfigManager(NavPickChip0ConfigManager):
                 "grid_size": [6, 6]
             }
         ]
-
-    def load_objects_for_layout(self, idx):
-        super().load_objects_for_layout(idx)
-        if idx == 0:
-            pos = [0.75, -2.2, 0]
-            self.target_object_info.append({"position": pos})
-            self.target_bbox.append(self.center2bbox(pos))
-        elif idx == 1:
-            pos = [2.15, -1.68, 0]
-            self.target_object_info.append({"position": pos})
-            self.target_bbox.append(self.center2bbox(pos))
 
     def get_instruction(self, target_entity, target_container, **kwargs):
         instruction = ["Navigate to pick the chips from the main counter, then go around the island to place them on the plate."]
@@ -612,13 +694,6 @@ class NavPickChip2ConfigManager(NavPickChip0ConfigManager):
             }
         ]
 
-    def load_objects_for_layout(self, idx):
-        super().load_objects_for_layout(idx)
-        if idx == 0:
-            pos = [2.15, -1.68, 0]
-            self.target_object_info.append({"position": pos})
-            self.target_bbox.append(self.center2bbox(pos))
-
     def get_instruction(self, target_entity, target_container, **kwargs):
         instruction = ["Navigate to the counter to pick the chips and place them on the plate."]
         self.config["task"]["instructions"] = instruction
@@ -638,7 +713,15 @@ class NavPickChip2ConfigManager(NavPickChip0ConfigManager):
                     robot="pandaomron"
                 )
             ),
+            dict(
+                contain=dict(
+                    entities=[self.merged_seen_object[0][0]],
+                    container=f"{self.merged_seen_container[0][0]}",
+                )
+            ),
         ]
+        conditions_config["ordered_indices"] = None
+
         self.target_object_info[0]["target_bbox"] = self.target_bbox[0]
         self.target_object_info[0]["target_orientation"] = "right"
         self.config["task"]["conditions"] = conditions_config
@@ -653,6 +736,27 @@ class NavPickChip2Task(NavPickChip0Task):
             "euler": [0, 0, 1.57],
         }
         self.robot.set_init_pos(**self.robot_params)
+
+    def get_expert_skill_sequence(self, physics):
+        target_entity = self.config_manager.target_entity
+        target_container = self.config_manager.target_container
+        target_entities = target_entity[0]
+        target_container_0 = target_container[0][0]
+
+        skill_sequence = [
+            # navigate to the single work area
+            partial(SkillLib.moveforward),
+            partial(SkillLib.moveforward),
+            partial(SkillLib.rotate_left),
+            partial(SkillLib.moveforward),
+            partial(SkillLib.moveforward),
+            # pick the snack, place on the plate and finish
+            partial(SkillLib.pick, target_entity_name=target_entities[0]),
+            partial(SkillLib.place, target_container_name=target_container_0),
+            partial(SkillLib.observe),
+            partial(SkillLib.end),
+        ]
+        return skill_sequence
 
 
 @register.add_config_manager("nav_pick_chip_3")

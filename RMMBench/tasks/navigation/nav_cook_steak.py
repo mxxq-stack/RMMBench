@@ -59,6 +59,21 @@ class NavCookSteakBaseTask(CompositeNavigationTask):
                     height = 0.02
                 entity.init_pos[2] += height
 
+    def get_manipulation_skill_sequence(self):
+        """
+        Manipulation skills mirroring cook_steak_0: put the steak into the
+        pan, turn on the stove knob, then transfer it to the plate.
+        """
+        return [
+            partial(SkillLib.place, target_container_name="pan_1"),
+            partial(SkillLib.observe),
+            partial(SkillLib.pick, body_name="stove_0/knob_front_right"),
+            partial(SkillLib.rotate_knob),
+            partial(SkillLib.observe),
+            partial(SkillLib.pick, target_entity_name="steak_0"),
+            partial(SkillLib.place, target_container_name="plate_0"),
+        ]
+
 
 # =============================================================================
 # cook_steak navigation variants (cook_steak_0 based, U_SHAPED_LARGE)
@@ -100,17 +115,6 @@ class NavCookSteak0ConfigManager(NavCookSteakBaseConfigManager):
             }
         ]
 
-    def load_objects_for_layout(self, idx):
-        super().load_objects_for_layout(idx)
-        if idx == 0:
-            pos = [1.075, -2.65, 0]
-            self.target_object_info.append({"position": pos})
-            self.target_bbox.append(self.center2bbox(pos))
-        elif idx == 1:
-            pos = [2.15, -1.68, 0]
-            self.target_object_info.append({"position": pos})
-            self.target_bbox.append(self.center2bbox(pos))
-
     def get_instruction(self, target_entity, target_container, **kwargs):
         instruction = ["Navigate to pick the steak, then go to the stove to cook it in the pan and place it on the plate."]
         self.config["task"]["instructions"] = instruction
@@ -118,36 +122,65 @@ class NavCookSteak0ConfigManager(NavCookSteakBaseConfigManager):
 
     def get_condition_config(self, **kwargs):
         conditions_config = dict()
+        # Orientation tokens are derived from each area's destination_position
+        # (bottom/left/right/top) so that subclasses with a different approach
+        # direction can reuse this condition as-is.
+        orientation_1 = self.composite_configs[0]["destination_position"]
+        orientation_2 = self.composite_configs[1]["destination_position"]
         conditions_config["asyn_sequence"] = [
+            # Step 0: navigate to area 1 (pick the steak)
             dict(
                 contain_robot_pose=dict(
                     target_bbox=self.target_bbox[0],
                     robot="pandaomron"
                 ),
                 robot_orientation=dict(
-                    target_orientation="bottom",
+                    target_orientation=orientation_1,
                     target_bbox=self.target_bbox[0],
                     robot="pandaomron"
                 )
             ),
+            # Step 1: navigate to area 2 (stove)
             dict(
                 contain_robot_pose=dict(
                     target_bbox=self.target_bbox[1],
                     robot="pandaomron"
                 ),
                 robot_orientation=dict(
-                    target_orientation="bottom",
+                    target_orientation=orientation_2,
                     target_bbox=self.target_bbox[1],
                     robot="pandaomron"
                 )
+            ),
+            # Step 2: cook - put the steak into the pan and turn on the stove
+            # (is_open locks in once satisfied, ANDed within this step,
+            # mirroring cook_steak_0's manipulation condition)
+            dict(
+                contain=dict(
+                    container="pan_1",
+                    entities=["steak_0"]
+                ),
+                is_open=dict(
+                    container="stove_0",
+                    joint_name="knob_front_right"
+                ),
+            ),
+            # Step 3: place the cooked steak on the plate
+            dict(
+                contain=dict(
+                    container="plate_0",
+                    entities=["steak_0"]
+                ),
             ),
         ]
-        conditions_config["ordered_indices"] = [0, 1]
+        # Ordered: pick (nav 0) -> stove (nav 1) -> cook in pan -> place on
+        # plate, enforcing the pan-before-plate order of cook_steak_0.
+        conditions_config["ordered_indices"] = [0, 1, 2, 3]
 
         self.target_object_info[0]["target_bbox"] = self.target_bbox[0]
-        self.target_object_info[0]["target_orientation"] = "bottom"
+        self.target_object_info[0]["target_orientation"] = orientation_1
         self.target_object_info[1]["target_bbox"] = self.target_bbox[1]
-        self.target_object_info[1]["target_orientation"] = "bottom"
+        self.target_object_info[1]["target_orientation"] = orientation_2
 
         self.config["task"]["conditions"] = conditions_config
 
@@ -158,7 +191,9 @@ class NavCookSteak0ConfigManager(NavCookSteakBaseConfigManager):
 @register.add_task("nav_cook_steak_0")
 class NavCookSteak0Task(NavCookSteakBaseTask):
     def __init__(self, task_name, robot, **kwargs):
-        self.attach_objects = ["plate", "pan", "stove", "steak", "pork_chop", "lamb_chop", "sink"]
+        self.attach_objects = ["plate", "pan", "stove", "sink",
+                               # "steak", "pork_chop", "lamb_chop"
+                               ]
         super().__init__(task_name, robot=robot, **kwargs)
 
     def get_expert_skill_sequence(self, physics):
@@ -168,11 +203,15 @@ class NavCookSteak0Task(NavCookSteakBaseTask):
             partial(SkillLib.rotate_left),
             partial(SkillLib.moveforward),
             partial(SkillLib.moveforward),
+            # Area 1 reached: pick up the steak
+            partial(SkillLib.pick, target_entity_name="steak_0"),
             partial(SkillLib.rotate_right),
             partial(SkillLib.moveforward),
             partial(SkillLib.moveforward),
-            partial(SkillLib.end),
         ]
+        # Area 2 (stove) reached: cook in pan, turn on the stove, place on plate
+        skill_sequence.extend(self.get_manipulation_skill_sequence())
+        skill_sequence.append(partial(SkillLib.end))
         return skill_sequence
 
 
@@ -221,17 +260,6 @@ class NavCookSteak1ConfigManager(NavCookSteak0ConfigManager):
                 "grid_size": [6, 6]
             }
         ]
-
-    def load_objects_for_layout(self, idx):
-        super().load_objects_for_layout(idx)
-        if idx == 0:
-            pos = [0.75, -2.2, 0]
-            self.target_object_info.append({"position": pos})
-            self.target_bbox.append(self.center2bbox(pos))
-        elif idx == 1:
-            pos = [2.15, -1.68, 0]
-            self.target_object_info.append({"position": pos})
-            self.target_bbox.append(self.center2bbox(pos))
 
     def get_instruction(self, target_entity, target_container, **kwargs):
         instruction = ["Navigate to pick the steak from the left counter, then go to the stove to cook it in the pan and place it on the plate."]
@@ -297,13 +325,6 @@ class NavCookSteak2ConfigManager(NavCookSteak0ConfigManager):
             }
         ]
 
-    def load_objects_for_layout(self, idx):
-        super().load_objects_for_layout(idx)
-        if idx == 0:
-            pos = [2.15, -1.68, 0]
-            self.target_object_info.append({"position": pos})
-            self.target_bbox.append(self.center2bbox(pos))
-
     def get_instruction(self, target_entity, target_container, **kwargs):
         instruction = ["Navigate to the stove to cook the steak in the pan and place it on the plate."]
         self.config["task"]["instructions"] = instruction
@@ -311,21 +332,48 @@ class NavCookSteak2ConfigManager(NavCookSteak0ConfigManager):
 
     def get_condition_config(self, **kwargs):
         conditions_config = dict()
+        # Orientation token derived from the single area's destination_position.
+        orientation_1 = self.composite_configs[0]["destination_position"]
         conditions_config["asyn_sequence"] = [
+            # Step 0: dock at the operating area
             dict(
                 contain_robot_pose=dict(
                     target_bbox=self.target_bbox[0],
                     robot="pandaomron"
                 ),
                 robot_orientation=dict(
-                    target_orientation="bottom",
+                    target_orientation=orientation_1,
                     target_bbox=self.target_bbox[0],
                     robot="pandaomron"
                 )
             ),
+            # Step 1: cook - put the steak into the pan and turn on the stove
+            # (is_open locks in once satisfied, ANDed within this step,
+            # mirroring cook_steak_0's manipulation condition)
+            dict(
+                contain=dict(
+                    container="pan_1",
+                    entities=["steak_0"]
+                ),
+                is_open=dict(
+                    container="stove_0",
+                    joint_name="knob_front_right"
+                ),
+            ),
+            # Step 2: place the cooked steak on the plate
+            dict(
+                contain=dict(
+                    container="plate_0",
+                    entities=["steak_0"]
+                ),
+            ),
         ]
+        # Ordered: dock -> cook in pan -> place on plate, enforcing the
+        # pan-before-plate order of cook_steak_0.
+        conditions_config["ordered_indices"] = [0, 1, 2]
+
         self.target_object_info[0]["target_bbox"] = self.target_bbox[0]
-        self.target_object_info[0]["target_orientation"] = "bottom"
+        self.target_object_info[0]["target_orientation"] = orientation_1
         self.config["task"]["conditions"] = conditions_config
 
 
@@ -338,6 +386,20 @@ class NavCookSteak2Task(NavCookSteak0Task):
             "euler": [0, 0, 1.57],
         }
         self.robot.set_init_pos(**self.robot_params)
+
+    def get_expert_skill_sequence(self, physics):
+        # Single area: dock once, then cook in pan and place on plate
+        # (steak_0 is in the same area as pan_1/plate_0).
+        skill_sequence = [
+            partial(SkillLib.moveforward),
+            partial(SkillLib.moveforward),
+            partial(SkillLib.rotate_left),
+            partial(SkillLib.moveforward),
+            partial(SkillLib.moveforward),
+        ]
+        skill_sequence.extend(self.get_manipulation_skill_sequence())
+        skill_sequence.append(partial(SkillLib.end))
+        return skill_sequence
 
 
 # =============================================================================
