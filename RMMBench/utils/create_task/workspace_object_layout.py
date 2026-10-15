@@ -61,7 +61,7 @@ def get_work_info(workspace, target_dim=(0.4, 0.4), anchor='bottom', offset_dist
     # pushing the region off the table)
     # start_x = max(x_min, min(start_x, x_max - reg_lx))
     # start_y = max(y_min, min(start_y, y_max - reg_ly))
-    print("workregion:",workregion)
+    # print("workregion:", workregion)
     # Calculate robot xy position based on workregion edge closest to robot
     wx_min, wx_max, wy_min, wy_max, _, _ = workregion
     center_x = (wx_min + wx_max) / 2
@@ -77,8 +77,8 @@ def get_work_info(workspace, target_dim=(0.4, 0.4), anchor='bottom', offset_dist
         robot_xy = [wx_max + robot_offset, center_y]
     else:
         robot_xy = [center_x, center_y]
-    print(f"[robot_position] anchor={anchor}, workregion_edge_xy={robot_xy}, "
-          f"workregion={[wx_min, wx_max, wy_min, wy_max]}")
+    # print(f"[robot_position] anchor={anchor}, workregion_edge_xy={robot_xy}, "
+    #      f"workregion={[wx_min, wx_max, wy_min, wy_max]}")
     return {
         "workregion": workregion,
         "z": z_max,
@@ -304,7 +304,7 @@ def generate_and_save_task_config(task_name, scene_name, fixture_name, robot_con
     with open(save_path, 'w', encoding='utf-8') as f:
         json.dump(config_data, f, indent=4, ensure_ascii=False)
 
-    print(f"Task '{task_name}' synchronized to {save_path}")
+    # print(f"Task '{task_name}' synchronized to {save_path}")
 
 
 def layout_objects_with_robot(work_info, container_name, objects_to_place,
@@ -345,7 +345,7 @@ def layout_objects_with_robot(work_info, container_name, objects_to_place,
         "container": arrange_res["container"],
         "objects": arrange_res["objects"]
     }
-    print("task_config:", task_config)
+    # print("task_config:", task_config)
     return task_config
 
 
