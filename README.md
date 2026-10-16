@@ -103,8 +103,4 @@ Before running, edit the config variables at the top of `run_vlm_eval.sh`. Leave
 
 To test navigation tasks, change the default of `--episode-config` in `scripts/vlm_eval.py` from `manipulation_episodes.json` to `nav_episodes.json` (both under `RMMBench/vlm_evaluation/configs/episodes/`).
 
-## Known Limitations
 
-- The navigation tasks are still under optimization: the expert skill sequences and navigation paths of the 20 newly added navigation tasks are being refined and will be finalized before the official release.
-- Some scripts still contain debug prints and experimental code left from development; they do not affect normal usage and will be cleaned up in the final version.
-- Results for more VLM backends and ablation studies are still in progress and have not been included in this repository yet.
