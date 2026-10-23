@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[**Project Page**](https://mxxq-stack.github.io/rmmbench-project/) &nbsp;|&nbsp; [**Paper**]()
+[**Project Page**](https://mxxq-stack.github.io/rmmbench-project/) &nbsp;|&nbsp; [**Paper**]((https://arxiv.org/abs/2610.05414)
 
 <!-- TODO: fill in the real links above -->
 
