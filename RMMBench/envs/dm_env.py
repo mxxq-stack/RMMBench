@@ -6,6 +6,70 @@ from dm_control import composer
 from RMMBench.utils.utils import euler_to_quaternion, expand_mask, compute_camera_positions_and_bounds, CAMERA_NAME_MAP, euler_to_rotation_matrix
 from RMMBench.utils.camera_utils import rotation_6d_to_matrix
 from RMMBench.utils.depth2cloud import rotMatList2NPRotMat, quat2Mat, posRotMat2Mat, PointCloudGenerator
+import mujoco
+from dm_control.mujoco.engine import Camera
+
+_original_camera_render = Camera.render
+
+def patched_camera_render(
+    self,
+    overlays=(),
+    depth=False,
+    segmentation=False,
+    scene_option=None,
+    render_flag_overrides=None,
+):
+    if not segmentation:
+        return _original_camera_render(
+            self,
+            overlays=overlays,
+            depth=depth,
+            segmentation=segmentation,
+            scene_option=scene_option,
+            render_flag_overrides=render_flag_overrides,
+        )
+
+    if overlays and (depth or segmentation):
+        raise ValueError("Text overlays are not supported when depth or segmentation is enabled.")
+    if render_flag_overrides and (depth or segmentation):
+        raise ValueError("render_flag_overrides is not supported when depth or segmentation is enabled.")
+
+    self.update(scene_option=scene_option)
+
+    if self._scene_callback:
+        self._scene_callback(self._physics, self._scene)
+
+    render_flag_overrides = render_flag_overrides or {}
+    render_flag_overrides.update({
+        mujoco.mjtRndFlag.mjRND_SEGMENT: True,
+        mujoco.mjtRndFlag.mjRND_IDCOLOR: True,
+    })
+
+    with self.scene.override_flags(render_flag_overrides):
+        with self._physics.contexts.gl.make_current() as ctx:
+            ctx.call(self._render_on_gl_thread, depth=depth, overlays=overlays)
+
+    image3 = self._rgb_buffer.astype(np.uint32)
+    segimage = (image3[:, :, 0] +
+                image3[:, :, 1] * (2**8) +
+                image3[:, :, 2] * (2**16))
+
+    max_segid = max(self._scene.ngeom + 1, int(segimage.max()) + 1)
+    segid2output = np.full((max_segid, 2), fill_value=-1, dtype=np.int32)
+
+    visible_geoms = [g for g in self._scene.geoms if g.segid != -1]
+    visible_segids = np.array([g.segid + 1 for g in visible_geoms], np.int32)
+    visible_objid = np.array([g.objid for g in visible_geoms], np.int32)
+    visible_objtype = np.array([g.objtype for g in visible_geoms], np.int32)
+
+    valid_mask = visible_segids < max_segid
+    segid2output[visible_segids[valid_mask], 0] = visible_objid[valid_mask]
+    segid2output[visible_segids[valid_mask], 1] = visible_objtype[valid_mask]
+
+    image = segid2output[segimage]
+    return np.flipud(image)
+
+Camera.render = patched_camera_render
 
 class LM4ManipDMEnv(composer.Environment):
     def __init__(self, reset_wait_step=10, **kwargs):
