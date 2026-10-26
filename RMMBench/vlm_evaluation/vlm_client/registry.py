@@ -144,9 +144,9 @@ def create_client(backend: str, url: Optional[str] = None, model: Optional[str] 
     """
     if backend not in BACKEND_CONFIGS:
         raise ValueError(
-            f"不支持的 vlm_backend: {backend!r}, 当前支持: {list_backends()}\n"
-            f"提示: --vlm-backend 接受后端别名（如 deepseek/seed2d0/gemini3flash）或 API 文档中的模型名（如 deepseek-flash）；\n"
-            f"如需其他模型名，用 --vlm-backend 指后端 + registry.py 里改 model，或命令行 --vlm-url 覆盖端点"
+            f"Unsupported vlm_backend: {backend!r}. Currently supported: {list_backends()}\n"
+            f"Note: --vlm-backend accepts backend aliases (e.g., deepseek/seed2d0/gemini3flash) or model names from API docs (e.g., deepseek-flash);\n"
+            f"For other model names, use --vlm-backend to specify the backend and modify the model in registry.py, or override the endpoint via --vlm-url in CLI."
         )
     cfg = BACKEND_CONFIGS[backend]
 
